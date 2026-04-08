@@ -700,7 +700,7 @@ const handlers: Record<string, Handler> = {
 
   // ── 获取图片/语音 URL ──
   [Actions.GET_PIC_URL]: async (client, params) => {
-    const elem = params.elem as Record<string, unknown>;
+    const elem = params.elem;
     const contact = params.group_id
       ? client.pickGroup(gid(params))
       : client.pickFriend(uid(params));
@@ -708,7 +708,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.GET_PTT_URL]: async (client, params) => {
-    const elem = params.elem as Record<string, unknown>;
+    const elem = params.elem;
     const contact = params.group_id
       ? client.pickGroup(gid(params))
       : client.pickFriend(uid(params));
