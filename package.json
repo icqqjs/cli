@@ -1,6 +1,6 @@
 {
   "name": "@icqqjs/cli",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "基于 icqq 的命令行 QQ 客户端",
   "type": "module",
   "main": "dist/cli.js",
@@ -38,7 +38,6 @@
   "license": "ISC",
   "packageManager": "pnpm@10.7.0",
   "devDependencies": {
-    "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.30.0",
     "@types/node": "^25.5.0",
     "@types/react": "^19.0.0",
