@@ -485,7 +485,7 @@ const handlers: Record<string, Handler> = {
 
   [Actions.GROUP_MUTE_ANONY]: async (client, params) => {
     const flag = params.flag as string;
-    const duration = params.duration ? Number(params.duration) : undefined;
+    const duration = params.duration !== undefined ? Number(params.duration) : undefined;
     await client.pickGroup(gid(params)).muteAnony(flag, duration);
     return { ok: true };
   },
