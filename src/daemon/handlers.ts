@@ -502,8 +502,10 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.SEND_TEMP_MSG]: async (client, params) => {
+    const g = gid(params);
+    if (!Number.isFinite(g) || g <= 0) throw new Error("无效的 group_id");
     const message = parseMessage(params.message as string);
-    return await client.sendTempMsg(gid(params), uid(params), message);
+    return await client.sendTempMsg(g, uid(params), message);
   },
 
   [Actions.GET_ROAMING_STAMP]: async (client) => {
@@ -599,7 +601,9 @@ const handlers: Record<string, Handler> = {
     const guildId = params.guild_id as string;
     const channelId = params.channel_id as string;
     const seq = Number(params.seq);
-    return await client.pickGuild(guildId).channels.get(channelId)?.recallMsg(seq);
+    const channel = client.pickGuild(guildId).channels.get(channelId);
+    if (!channel) throw new Error(`频道 ${channelId} 不存在`);
+    return await channel.recallMsg(seq);
   },
 
   // ── 用户文件操作 ──
@@ -723,7 +727,9 @@ const handlers: Record<string, Handler> = {
       content: (params.content as string) ?? undefined,
       image: (params.image as string) ?? undefined,
     };
-    await client.pickGuild(guildId).channels.get(channelId)?.share(content);
+    const channel = client.pickGuild(guildId).channels.get(channelId);
+    if (!channel) throw new Error(`频道 ${channelId} 不存在`);
+    await channel.share(content);
     return { ok: true };
   },
 };
