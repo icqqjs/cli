@@ -157,6 +157,45 @@ export const Actions = {
   GUILD_SEND_MSG: "guild_send_msg",
   GUILD_RECALL_MSG: "guild_recall_msg",
 
+  // 用户文件操作
+  GET_FILE_INFO: "get_file_info",
+  GET_FILE_URL: "get_file_url",
+  GET_AVATAR_URL: "get_avatar_url",
+  GET_GROUP_AVATAR_URL: "get_group_avatar_url",
+
+  // 屏蔽群成员消息
+  SET_SCREEN_MEMBER_MSG: "set_screen_member_msg",
+
+  // 群文件转发
+  GFS_FORWARD: "gfs_forward",
+  GFS_FORWARD_OFFLINE: "gfs_forward_offline",
+
+  // 重载列表
+  RELOAD_BLACKLIST: "reload_blacklist",
+  RELOAD_STRANGER_LIST: "reload_stranger_list",
+
+  // 在线状态查询
+  GET_STATUS_INFO: "get_status_info",
+
+  // 密钥/工具
+  GET_CLIENT_KEY: "get_client_key",
+  GET_PSKEY: "get_pskey",
+  UID2UIN: "uid2uin",
+  UIN2UID: "uin2uid",
+
+  // 视频/图片/语音 URL
+  GET_VIDEO_URL: "get_video_url",
+  GET_ADD_FRIEND_SETTING: "get_add_friend_setting",
+
+  // 频道扩展
+  RELOAD_GUILDS: "reload_guilds",
+  GET_FORUM_URL: "get_forum_url",
+  GUILD_CHANNEL_SHARE: "guild_channel_share",
+
+  // 获取图片/语音 URL (Contactable)
+  GET_PIC_URL: "get_pic_url",
+  GET_PTT_URL: "get_ptt_url",
+
   // 订阅
   SUBSCRIBE: "subscribe",
   UNSUBSCRIBE: "unsubscribe",

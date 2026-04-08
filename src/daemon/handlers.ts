@@ -589,6 +589,131 @@ const handlers: Record<string, Handler> = {
     const seq = Number(params.seq);
     return await client.pickGuild(guildId).channels.get(channelId)?.recallMsg(seq);
   },
+
+  // ── 用户文件操作 ──
+  [Actions.GET_FILE_INFO]: async (client, params) => {
+    const fid = params.fid as string;
+    return await client.pickUser(uid(params)).getFileInfo(fid);
+  },
+
+  [Actions.GET_FILE_URL]: async (client, params) => {
+    const fid = params.fid as string;
+    return await client.pickUser(uid(params)).getFileUrl(fid);
+  },
+
+  [Actions.GET_AVATAR_URL]: async (client, params) => {
+    const size = (params.size as 0 | 40 | 100 | 140) ?? 0;
+    return { url: client.pickUser(uid(params)).getAvatarUrl(size) };
+  },
+
+  [Actions.GET_GROUP_AVATAR_URL]: async (client, params) => {
+    const size = (params.size as 0 | 40 | 100 | 140) ?? 0;
+    const history = params.history ? Number(params.history) : undefined;
+    return { url: client.pickGroup(gid(params)).getAvatarUrl(size, history) };
+  },
+
+  // ── 屏蔽群成员消息 ──
+  [Actions.SET_SCREEN_MEMBER_MSG]: async (client, params) => {
+    const isScreen = params.is_screen !== false;
+    return await client.setGroupMemberScreenMsg(gid(params), uid(params), isScreen);
+  },
+
+  // ── 群文件转发 ──
+  [Actions.GFS_FORWARD]: async (client, params) => {
+    const sourceGid = gid(params);
+    const targetGid = Number(params.target_group_id);
+    const fid = params.fid as string;
+    const pid = (params.pid as string) ?? "/";
+    const name = (params.name as string) ?? undefined;
+    const sourceGfs = client.acquireGfs(sourceGid);
+    const stat = await sourceGfs.stat(fid) as any;
+    const targetGfs = client.acquireGfs(targetGid);
+    return await targetGfs.forward(stat, pid, name);
+  },
+
+  [Actions.GFS_FORWARD_OFFLINE]: async (client, params) => {
+    const fid = params.fid as string;
+    const name = (params.name as string) ?? undefined;
+    const gfs = client.acquireGfs(gid(params));
+    return await gfs.forwardOfflineFile(fid, name);
+  },
+
+  // ── 重载列表扩展 ──
+  [Actions.RELOAD_BLACKLIST]: async (client) => {
+    await client.reloadBlackList();
+    return { ok: true, blacklistCount: client.blacklist.size };
+  },
+
+  [Actions.RELOAD_STRANGER_LIST]: async (client) => {
+    await client.reloadStrangerList();
+    return { ok: true };
+  },
+
+  [Actions.RELOAD_GUILDS]: async (client) => {
+    await client.reloadGuilds();
+    return { ok: true };
+  },
+
+  // ── 在线状态查询 ──
+  [Actions.GET_STATUS_INFO]: async (client, params) => {
+    const uin = params.uin ? Number(params.uin) : undefined;
+    return await client.getStatusInfo(uin);
+  },
+
+  // ── 密钥/工具 ──
+  [Actions.GET_CLIENT_KEY]: async (client) => {
+    return await client.getClientKey();
+  },
+
+  [Actions.GET_PSKEY]: async (client, params) => {
+    const domains = params.domain as string | string[];
+    return await client.getPSkey(domains);
+  },
+
+  [Actions.UID2UIN]: async (client, params) => {
+    const uid = params.uid as string;
+    const groupId = params.group_id ? Number(params.group_id) : undefined;
+    return { uin: await client.uid2uin(uid, groupId) };
+  },
+
+  [Actions.UIN2UID]: async (client, params) => {
+    const uin = Number(params.uin);
+    const groupId = params.group_id ? Number(params.group_id) : undefined;
+    return { uid: await client.uin2uid(uin, groupId) };
+  },
+
+  // ── 视频/加好友设置 ──
+  [Actions.GET_VIDEO_URL]: async (client, params) => {
+    const fid = params.fid as string;
+    const md5 = params.md5 as string;
+    return { url: await client.getVideoUrl(fid, md5) };
+  },
+
+  [Actions.GET_ADD_FRIEND_SETTING]: async (client, params) => {
+    return { setting: await client.pickUser(uid(params)).getAddFriendSetting() };
+  },
+
+  // ── 频道扩展 ──
+  [Actions.GET_FORUM_URL]: async (client, params) => {
+    const guildId = params.guild_id as string;
+    const channelId = params.channel_id as string;
+    const forumId = params.forum_id as string;
+    return { url: await client.getForumUrl(guildId, channelId, forumId) };
+  },
+
+  [Actions.GUILD_CHANNEL_SHARE]: async (client, params) => {
+    const guildId = params.guild_id as string;
+    const channelId = params.channel_id as string;
+    const content = {
+      url: params.url as string,
+      title: params.title as string,
+      summary: (params.summary as string) ?? undefined,
+      content: (params.content as string) ?? undefined,
+      image: (params.image as string) ?? undefined,
+    };
+    await client.pickGuild(guildId).channels.get(channelId)?.share(content);
+    return { ok: true };
+  },
 };
 
 export async function handleRequest(
