@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import zod from "zod";
 import { argument } from "pastel";
-import { IpcMutate } from "../../../components/IpcCommand.js";
-import { Actions } from "../../../daemon/protocol.js";
-import { GroupSelector } from "../../../components/GroupSelector.js";
+import { IpcMutate } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
 
 export const description = "移动群文件到指定目录";
 

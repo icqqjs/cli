@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import { Text } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
-import { IpcCommand } from "../../components/IpcCommand.js";
-import { Actions } from "../../daemon/protocol.js";
-import { Table } from "../../components/Table.js";
-import { GroupSelector } from "../../components/GroupSelector.js";
+import { IpcCommand } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
+import { Table } from "@/components/Table.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
 
 export const description = "查看群禁言列表";
 

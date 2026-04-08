@@ -1,6 +1,6 @@
 import React from "react";
-import { IpcMutate } from "../../components/IpcCommand.js";
-import { Actions } from "../../daemon/protocol.js";
+import { IpcMutate } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "刷新好友列表缓存";
 

@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { Text, Box } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
-import { IpcCommand } from "../../../components/IpcCommand.js";
-import { Actions } from "../../../daemon/protocol.js";
-import { GroupSelector } from "../../../components/GroupSelector.js";
+import { IpcCommand } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
 
 export const description = "获取群文件下载链接";
 
