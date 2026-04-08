@@ -7,6 +7,7 @@ import { handleRequest } from "./handlers.js";
 import { stringifyMessage } from "../lib/parse-message.js";
 import { loadConfig, saveConfig } from "../lib/config.js";
 import { getSocketPath } from "../lib/paths.js";
+import { sendNotification } from "../lib/notify.js";
 
 type Subscription = {
   type: "group" | "private";
@@ -22,6 +23,7 @@ export class DaemonServer {
   private sockets = new Map<string, net.Socket>();
   private nextSocketId = 0;
   private webhookUrl = "";
+  private notifyEnabled = false;
 
   constructor(client: Client, uin: number) {
     this.client = client;
@@ -35,6 +37,7 @@ export class DaemonServer {
     try {
       const config = await loadConfig();
       this.webhookUrl = config.webhookUrl ?? "";
+      this.notifyEnabled = config.notifyEnabled ?? false;
     } catch { /* ignore */ }
   }
 
@@ -75,6 +78,26 @@ export class DaemonServer {
 
       // Push to webhook
       void this.pushWebhook({ event: "message", data: eventData });
+
+      // Push system notification
+      if (this.notifyEnabled) {
+        const sender = eventData.nickname;
+        const body = eventData.raw_message;
+        if (msgType === "group") {
+          const groupName =
+            this.client.gl.get(targetId)?.group_name ?? String(targetId);
+          sendNotification({
+            title: groupName,
+            subtitle: sender,
+            body,
+          });
+        } else {
+          sendNotification({
+            title: sender,
+            body,
+          });
+        }
+      }
 
       // Push to IPC subscribers
       for (const [socketId, subs] of this.subscriptions.entries()) {
@@ -188,6 +211,31 @@ export class DaemonServer {
         id: req.id,
         ok: true,
         data: { webhookUrl: this.webhookUrl || null },
+      });
+      return;
+    }
+
+    if (req.action === Actions.SET_NOTIFY) {
+      const enabled = req.params.enabled !== false;
+      this.notifyEnabled = enabled;
+      try {
+        const config = await loadConfig();
+        config.notifyEnabled = enabled || undefined;
+        await saveConfig(config);
+      } catch { /* ignore */ }
+      this.sendToSocket(socket, {
+        id: req.id,
+        ok: true,
+        data: { notifyEnabled: enabled },
+      });
+      return;
+    }
+
+    if (req.action === Actions.GET_NOTIFY) {
+      this.sendToSocket(socket, {
+        id: req.id,
+        ok: true,
+        data: { notifyEnabled: this.notifyEnabled },
       });
       return;
     }

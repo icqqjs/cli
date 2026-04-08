@@ -11,6 +11,7 @@ export interface AccountConfig {
 export interface IcqqConfig {
   defaultUin?: number;
   webhookUrl?: string;
+  notifyEnabled?: boolean;
   accounts: Record<string, AccountConfig>;
 }
 

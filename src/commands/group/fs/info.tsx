@@ -1,23 +1,27 @@
-import React from "react";
+import React, { useState } from "react";
 import { Text, Box } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { IpcCommand } from "../../../components/IpcCommand.js";
 import { Actions } from "../../../daemon/protocol.js";
+import { GroupSelector } from "../../../components/GroupSelector.js";
 
 export const description = "查看群文件系统信息";
 
 export const args = zod.tuple([
-  zod.number().describe(argument({ name: "gid", description: "群号" })),
+  zod.number().optional().describe(argument({ name: "gid", description: "群号（不填则交互选择）" })),
 ]);
 
 type Props = { args: zod.infer<typeof args> };
 
 export default function GfsInfo({ args: [gid] }: Props) {
+  const [selectedGid, setSelectedGid] = useState(gid);
+  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
+
   return (
     <IpcCommand
       action={Actions.GFS_STAT}
-      params={{ group_id: gid }}
+      params={{ group_id: selectedGid }}
       loadingText="获取文件系统信息…"
       render={(data: any) => (
         <Box flexDirection="column" paddingX={1}>

@@ -1,19 +1,20 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "../../../components/Spinner.js";
 import { Table } from "../../../components/Table.js";
+import { GroupSelector } from "../../../components/GroupSelector.js";
 import { useIpcRequest } from "../../../lib/use-ipc.js";
 import { Actions } from "../../../daemon/protocol.js";
 
 export const description = "查看群成员列表";
 
 export const args = zod.tuple([
-  zod.number().describe(
+  zod.number().optional().describe(
     argument({
       name: "gid",
-      description: "群号",
+      description: "群号（不填则交互选择）",
     }),
   ),
 ]);
@@ -22,7 +23,7 @@ type Props = {
   args: zod.infer<typeof args>;
 };
 
-export default function ListGroupMember({ args: [gid] }: Props) {
+function MemberList({ gid }: { gid: number }) {
   const { exit } = useApp();
   const { loading, data, error } = useIpcRequest(
     Actions.LIST_GROUP_MEMBERS,
@@ -57,4 +58,11 @@ export default function ListGroupMember({ args: [gid] }: Props) {
       data={members}
     />
   );
+}
+
+export default function ListGroupMember({ args: [gid] }: Props) {
+  const [selectedGid, setSelectedGid] = useState(gid);
+  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
+
+  return <MemberList gid={selectedGid} />;
 }

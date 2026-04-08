@@ -121,7 +121,15 @@ export const Actions = {
   SUBSCRIBE: "subscribe",
   UNSUBSCRIBE: "unsubscribe",
 
+  // 文件传输
+  SEND_PRIVATE_FILE: "send_private_file",
+  SEND_GROUP_FILE: "send_group_file",
+
   // Webhook
   SET_WEBHOOK: "set_webhook",
   GET_WEBHOOK: "get_webhook",
+
+  // Notification
+  SET_NOTIFY: "set_notify",
+  GET_NOTIFY: "get_notify",
 } as const;

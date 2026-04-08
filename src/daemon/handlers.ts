@@ -435,6 +435,21 @@ const handlers: Record<string, Handler> = {
     await client.reloadGroupList();
     return { ok: true, groupCount: client.gl.size };
   },
+
+  // ── 文件传输 ──
+  [Actions.SEND_PRIVATE_FILE]: async (client, params) => {
+    const filePath = params.file as string;
+    const u = uid(params);
+    return await client.pickFriend(u).sendFile(filePath);
+  },
+
+  [Actions.SEND_GROUP_FILE]: async (client, params) => {
+    const filePath = params.file as string;
+    const g = gid(params);
+    const pid = (params.pid as string) ?? "/";
+    const name = (params.name as string) ?? undefined;
+    return await client.pickGroup(g).sendFile(filePath, pid, name);
+  },
 };
 
 export async function handleRequest(

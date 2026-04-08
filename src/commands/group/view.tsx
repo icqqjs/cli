@@ -3,6 +3,7 @@ import { Text, Box, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "../../components/Spinner.js";
+import { GroupSelector } from "../../components/GroupSelector.js";
 import { loadConfig } from "../../lib/config.js";
 import { IpcClient } from "../../lib/ipc-client.js";
 import { isDaemonRunning } from "../../daemon/lifecycle.js";
@@ -11,10 +12,10 @@ import { Actions } from "../../daemon/protocol.js";
 export const description = "查看群资料";
 
 export const args = zod.tuple([
-  zod.number().describe(
+  zod.number().optional().describe(
     argument({
       name: "gid",
-      description: "群号",
+      description: "群号（不填则交互选择）",
     }),
   ),
 ]);
@@ -30,9 +31,12 @@ function formatDate(ts: number): string {
 
 export default function ViewGroup({ args: [gid] }: Props) {
   const { exit } = useApp();
+  const [selectedGid, setSelectedGid] = useState(gid);
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<any>(null);
   const [error, setError] = useState("");
+
+  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
 
   useEffect(() => {
     void (async () => {
@@ -44,7 +48,7 @@ export default function ViewGroup({ args: [gid] }: Props) {
           throw new Error("守护进程未运行，请先执行 icqq login");
 
         const ipc = await IpcClient.connect(uin);
-        const resp = await ipc.request(Actions.GET_GROUP_INFO, { gid });
+        const resp = await ipc.request(Actions.GET_GROUP_INFO, { gid: selectedGid });
         ipc.close();
 
         if (!resp.ok) throw new Error(resp.error ?? "请求失败");
@@ -54,7 +58,7 @@ export default function ViewGroup({ args: [gid] }: Props) {
       }
       setLoading(false);
     })();
-  }, [gid]);
+  }, [selectedGid]);
 
   useEffect(() => {
     if (!loading) {

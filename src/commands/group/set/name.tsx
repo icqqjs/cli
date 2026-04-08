@@ -3,6 +3,7 @@ import { Text, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "../../../components/Spinner.js";
+import { GroupSelector } from "../../../components/GroupSelector.js";
 import { loadConfig } from "../../../lib/config.js";
 import { IpcClient } from "../../../lib/ipc-client.js";
 import { isDaemonRunning } from "../../../daemon/lifecycle.js";
@@ -11,13 +12,13 @@ import { Actions } from "../../../daemon/protocol.js";
 export const description = "设置群名称";
 
 export const args = zod.tuple([
-  zod.number().describe(
+  zod.number().optional().describe(
     argument({
       name: "gid",
-      description: "群号",
+      description: "群号（不填则交互选择）",
     }),
   ),
-  zod.string().describe(
+  zod.string().optional().describe(
     argument({
       name: "name",
       description: "新群名称",
@@ -31,9 +32,12 @@ type Props = {
 
 export default function SetGroupName({ args: [gid, name] }: Props) {
   const { exit } = useApp();
+  const [selectedGid, setSelectedGid] = useState(gid);
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
 
   useEffect(() => {
     void (async () => {
@@ -46,7 +50,7 @@ export default function SetGroupName({ args: [gid, name] }: Props) {
 
         const ipc = await IpcClient.connect(uin);
         const resp = await ipc.request(Actions.SET_GROUP_NAME, {
-          gid,
+          gid: selectedGid,
           name,
         });
         ipc.close();
@@ -58,7 +62,7 @@ export default function SetGroupName({ args: [gid, name] }: Props) {
       }
       setLoading(false);
     })();
-  }, [gid, name]);
+  }, [selectedGid, name]);
 
   useEffect(() => {
     if (!loading) {
@@ -72,7 +76,7 @@ export default function SetGroupName({ args: [gid, name] }: Props) {
 
   return (
     <Text color="green">
-      ✔ 已将群 {gid} 的名称设置为「{name}」
+      ✔ 已将群 {selectedGid} 的名称设置为「{name}」
     </Text>
   );
 }

@@ -3,6 +3,8 @@ import { Text, Box, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "../../../components/Spinner.js";
+import { GroupSelector } from "../../../components/GroupSelector.js";
+import { MemberSelector } from "../../../components/MemberSelector.js";
 import { loadConfig } from "../../../lib/config.js";
 import { IpcClient } from "../../../lib/ipc-client.js";
 import { isDaemonRunning } from "../../../daemon/lifecycle.js";
@@ -11,16 +13,16 @@ import { Actions } from "../../../daemon/protocol.js";
 export const description = "查看群成员资料";
 
 export const args = zod.tuple([
-  zod.number().describe(
+  zod.number().optional().describe(
     argument({
       name: "gid",
-      description: "群号",
+      description: "群号（不填则交互选择）",
     }),
   ),
-  zod.number().describe(
+  zod.number().optional().describe(
     argument({
       name: "uid",
-      description: "成员QQ号",
+      description: "成员QQ号（不填则交互选择）",
     }),
   ),
 ]);
@@ -42,9 +44,14 @@ const roleMap: Record<string, string> = {
 
 export default function ViewGroupMember({ args: [gid, uid] }: Props) {
   const { exit } = useApp();
+  const [selectedGid, setSelectedGid] = useState(gid);
+  const [selectedUid, setSelectedUid] = useState(uid);
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<any>(null);
   const [error, setError] = useState("");
+
+  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
+  if (selectedUid === undefined) return <MemberSelector gid={selectedGid} onSelect={setSelectedUid} />;
 
   useEffect(() => {
     void (async () => {
@@ -57,8 +64,8 @@ export default function ViewGroupMember({ args: [gid, uid] }: Props) {
 
         const ipc = await IpcClient.connect(uin);
         const resp = await ipc.request(Actions.GET_GROUP_MEMBER_INFO, {
-          gid,
-          uid,
+          gid: selectedGid,
+          uid: selectedUid,
         });
         ipc.close();
 
@@ -69,7 +76,7 @@ export default function ViewGroupMember({ args: [gid, uid] }: Props) {
       }
       setLoading(false);
     })();
-  }, [gid, uid]);
+  }, [selectedGid, selectedUid]);
 
   useEffect(() => {
     if (!loading) {

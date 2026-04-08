@@ -1,13 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import zod from "zod";
 import { argument, option } from "pastel";
 import { IpcMutate } from "../../components/IpcCommand.js";
 import { Actions } from "../../daemon/protocol.js";
+import { FriendSelector } from "../../components/FriendSelector.js";
 
 export const description = "删除好友";
 
 export const args = zod.tuple([
-  zod.number().describe(argument({ name: "uid", description: "好友QQ号" })),
+  zod.number().optional().describe(argument({ name: "uid", description: "好友QQ号（不填则交互选择）" })),
 ]);
 
 export const options = zod.object({
@@ -17,12 +18,15 @@ export const options = zod.object({
 type Props = { args: zod.infer<typeof args>; options: zod.infer<typeof options> };
 
 export default function FriendDelete({ args: [uid], options: { block } }: Props) {
+  const [selectedUid, setSelectedUid] = useState(uid);
+  if (selectedUid === undefined) return <FriendSelector onSelect={setSelectedUid} />;
+
   return (
     <IpcMutate
       action={Actions.FRIEND_DELETE}
-      params={{ user_id: uid, block }}
+      params={{ user_id: selectedUid, block }}
       loadingText="删除好友…"
-      successText={`已删除好友 ${uid}${block ? " 并加入黑名单" : ""}`}
+      successText={`已删除好友 ${selectedUid}${block ? " 并加入黑名单" : ""}`}
     />
   );
 }

@@ -3,6 +3,7 @@ import { Text, Box, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "../../components/Spinner.js";
+import { FriendSelector } from "../../components/FriendSelector.js";
 import { loadConfig } from "../../lib/config.js";
 import { IpcClient } from "../../lib/ipc-client.js";
 import { isDaemonRunning } from "../../daemon/lifecycle.js";
@@ -11,10 +12,10 @@ import { Actions } from "../../daemon/protocol.js";
 export const description = "查看好友资料";
 
 export const args = zod.tuple([
-  zod.number().describe(
+  zod.number().optional().describe(
     argument({
       name: "uid",
-      description: "好友QQ号",
+      description: "好友QQ号（不填则交互选择）",
     }),
   ),
 ]);
@@ -25,9 +26,12 @@ type Props = {
 
 export default function ViewFriend({ args: [uid] }: Props) {
   const { exit } = useApp();
+  const [selectedUid, setSelectedUid] = useState(uid);
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<any>(null);
   const [error, setError] = useState("");
+
+  if (selectedUid === undefined) return <FriendSelector onSelect={setSelectedUid} />;
 
   useEffect(() => {
     void (async () => {
@@ -39,7 +43,7 @@ export default function ViewFriend({ args: [uid] }: Props) {
           throw new Error("守护进程未运行，请先执行 icqq login");
 
         const ipc = await IpcClient.connect(uin);
-        const resp = await ipc.request(Actions.GET_FRIEND_INFO, { uid });
+        const resp = await ipc.request(Actions.GET_FRIEND_INFO, { uid: selectedUid });
         ipc.close();
 
         if (!resp.ok) throw new Error(resp.error ?? "请求失败");
@@ -49,7 +53,7 @@ export default function ViewFriend({ args: [uid] }: Props) {
       }
       setLoading(false);
     })();
-  }, [uid]);
+  }, [selectedUid]);
 
   useEffect(() => {
     if (!loading) {

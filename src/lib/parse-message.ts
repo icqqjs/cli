@@ -14,8 +14,25 @@
  */
 
 import type { MessageElem } from "@icqqjs/icqq";
+import fs from "node:fs";
+import path from "node:path";
 
 const TAG_RE = /\[(face|image|at|dice|rps)(?::([^\]]*))?\]/g;
+
+/** Check if a string is a local file path (not a URL or base64) */
+function isLocalPath(str: string): boolean {
+  if (!str) return false;
+  if (str.startsWith("http://") || str.startsWith("https://")) return false;
+  if (str.startsWith("base64://")) return false;
+  return true;
+}
+
+/** Read a local file and return a base64:// data URI */
+function fileToBase64(filePath: string): string {
+  const resolved = path.resolve(filePath);
+  const buf = fs.readFileSync(resolved);
+  return "base64://" + buf.toString("base64");
+}
 
 export function parseMessage(raw: string): string | (string | MessageElem)[] {
   const parts: (string | MessageElem)[] = [];
@@ -32,7 +49,10 @@ export function parseMessage(raw: string): string | (string | MessageElem)[] {
         parts.push({ type: "face", id: Number(value) });
         break;
       case "image":
-        parts.push({ type: "image", file: value! });
+        parts.push({
+          type: "image",
+          file: isLocalPath(value!) ? fileToBase64(value!) : value!,
+        });
         break;
       case "at":
         parts.push({

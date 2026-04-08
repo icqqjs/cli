@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import { createIcqqClient } from "../lib/client.js";
 import { loadConfig, getAccountConfig } from "../lib/config.js";
 import { getAccountDir, getPidPath, getSocketPath } from "../lib/paths.js";
+import { sendNotification } from "../lib/notify.js";
 import { DaemonServer } from "./server.js";
 
 async function main() {
@@ -87,9 +88,41 @@ async function main() {
   // Offline events
   client.on("system.offline.network", (e) => {
     console.log("[daemon] 网络掉线:", e.message);
+    if (config.notifyEnabled) {
+      sendNotification({ title: "icqq", body: `网络掉线: ${e.message}` });
+    }
   });
   client.on("system.offline.kickoff", (e) => {
     console.log("[daemon] 被踢下线:", e.message);
+    if (config.notifyEnabled) {
+      sendNotification({ title: "icqq", body: `被踢下线: ${e.message}` });
+    }
+  });
+
+  // Friend & group request notifications
+  client.on("request.friend.add", (e) => {
+    if (config.notifyEnabled) {
+      sendNotification({
+        title: "icqq · 好友请求",
+        body: `${e.nickname}(${e.user_id}) 请求添加好友${e.comment ? `: ${e.comment}` : ""}`,
+      });
+    }
+  });
+  client.on("request.group.invite", (e) => {
+    if (config.notifyEnabled) {
+      sendNotification({
+        title: "icqq · 群邀请",
+        body: `${e.nickname ?? e.user_id} 邀请你加入群 ${e.group_name ?? e.group_id}`,
+      });
+    }
+  });
+  client.on("request.group.add", (e) => {
+    if (config.notifyEnabled) {
+      sendNotification({
+        title: "icqq · 入群申请",
+        body: `${e.nickname ?? e.user_id} 申请加入群 ${e.group_name ?? e.group_id}${e.comment ? `: ${e.comment}` : ""}`,
+      });
+    }
   });
 }
 

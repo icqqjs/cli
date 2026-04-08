@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Text, Box, useApp } from "ink";
+import { Text, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "../../../components/Spinner.js";
 import { ChatSession } from "../../../components/ChatSession.js";
+import { GroupSelector } from "../../../components/GroupSelector.js";
 import { loadConfig } from "../../../lib/config.js";
 import { IpcClient } from "../../../lib/ipc-client.js";
 import { isDaemonRunning } from "../../../daemon/lifecycle.js";
@@ -11,10 +12,10 @@ import { isDaemonRunning } from "../../../daemon/lifecycle.js";
 export const description = "进入群聊天模式";
 
 export const args = zod.tuple([
-  zod.number().describe(
+  zod.number().optional().describe(
     argument({
       name: "id",
-      description: "群号",
+      description: "群号（不填则交互选择）",
     }),
   ),
 ]);
@@ -26,6 +27,7 @@ type Props = {
 export default function GroupChat({ args: [id] }: Props) {
   const { exit } = useApp();
   const [ipc, setIpc] = useState<IpcClient | null>(null);
+  const [selectedId, setSelectedId] = useState<number | undefined>(id);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -58,5 +60,9 @@ export default function GroupChat({ args: [id] }: Props) {
     return <Spinner label="连接守护进程…" />;
   }
 
-  return <ChatSession ipc={ipc} type="group" id={id} />;
+  if (selectedId === undefined) {
+    return <GroupSelector onSelect={setSelectedId} />;
+  }
+
+  return <ChatSession ipc={ipc} type="group" id={selectedId} />;
 }
