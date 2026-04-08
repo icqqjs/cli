@@ -555,6 +555,40 @@ const handlers: Record<string, Handler> = {
     const dm = params.dm === true;
     return await client.makeForwardMsg(msgs, dm);
   },
+
+  // ── 频道 ──
+  [Actions.GUILD_LIST]: async (client) => {
+    return client.getGuildList();
+  },
+
+  [Actions.GUILD_INFO]: async (client, params) => {
+    const guildId = params.guild_id as string;
+    return client.getGuildInfo(guildId);
+  },
+
+  [Actions.GUILD_CHANNELS]: async (client, params) => {
+    const guildId = params.guild_id as string;
+    return client.getChannelList(guildId);
+  },
+
+  [Actions.GUILD_MEMBERS]: async (client, params) => {
+    const guildId = params.guild_id as string;
+    return await client.getGuildMemberList(guildId);
+  },
+
+  [Actions.GUILD_SEND_MSG]: async (client, params) => {
+    const guildId = params.guild_id as string;
+    const channelId = params.channel_id as string;
+    const message = parseMessage(params.message as string);
+    return await client.sendGuildMsg(guildId, channelId, message);
+  },
+
+  [Actions.GUILD_RECALL_MSG]: async (client, params) => {
+    const guildId = params.guild_id as string;
+    const channelId = params.channel_id as string;
+    const seq = Number(params.seq);
+    return await client.pickGuild(guildId).channels.get(channelId)?.recallMsg(seq);
+  },
 };
 
 export async function handleRequest(

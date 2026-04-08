@@ -149,6 +149,14 @@ export const Actions = {
   GET_FORWARD_MSG: "get_forward_msg",
   MAKE_FORWARD_MSG: "make_forward_msg",
 
+  // 频道系统
+  GUILD_LIST: "guild_list",
+  GUILD_INFO: "guild_info",
+  GUILD_CHANNELS: "guild_channels",
+  GUILD_MEMBERS: "guild_members",
+  GUILD_SEND_MSG: "guild_send_msg",
+  GUILD_RECALL_MSG: "guild_recall_msg",
+
   // 订阅
   SUBSCRIBE: "subscribe",
   UNSUBSCRIBE: "unsubscribe",
