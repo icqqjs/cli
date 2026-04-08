@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Text, Box, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
-import { Spinner } from "../../../components/Spinner.js";
-import { GroupSelector } from "../../../components/GroupSelector.js";
-import { MemberSelector } from "../../../components/MemberSelector.js";
-import { loadConfig } from "../../../lib/config.js";
-import { IpcClient } from "../../../lib/ipc-client.js";
-import { isDaemonRunning } from "../../../daemon/lifecycle.js";
-import { Actions } from "../../../daemon/protocol.js";
+import { Spinner } from "@/components/Spinner.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
+import { MemberSelector } from "@/components/MemberSelector.js";
+import { loadConfig } from "@/lib/config.js";
+import { IpcClient } from "@/lib/ipc-client.js";
+import { isDaemonRunning } from "@/daemon/lifecycle.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "查看群成员资料";
 
@@ -42,16 +42,11 @@ const roleMap: Record<string, string> = {
   member: "成员",
 };
 
-export default function ViewGroupMember({ args: [gid, uid] }: Props) {
+function MemberInfo({ gid, uid }: { gid: number; uid: number }) {
   const { exit } = useApp();
-  const [selectedGid, setSelectedGid] = useState(gid);
-  const [selectedUid, setSelectedUid] = useState(uid);
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<any>(null);
   const [error, setError] = useState("");
-
-  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
-  if (selectedUid === undefined) return <MemberSelector gid={selectedGid} onSelect={setSelectedUid} />;
 
   useEffect(() => {
     void (async () => {
@@ -64,8 +59,8 @@ export default function ViewGroupMember({ args: [gid, uid] }: Props) {
 
         const ipc = await IpcClient.connect(uin);
         const resp = await ipc.request(Actions.GET_GROUP_MEMBER_INFO, {
-          gid: selectedGid,
-          uid: selectedUid,
+          gid,
+          uid,
         });
         ipc.close();
 
@@ -76,7 +71,7 @@ export default function ViewGroupMember({ args: [gid, uid] }: Props) {
       }
       setLoading(false);
     })();
-  }, [selectedGid, selectedUid]);
+  }, [gid, uid]);
 
   useEffect(() => {
     if (!loading) {
@@ -109,4 +104,13 @@ export default function ViewGroupMember({ args: [gid, uid] }: Props) {
       )}
     </Box>
   );
+}
+
+export default function ViewGroupMember({ args: [gid, uid] }: Props) {
+  const [selectedGid, setSelectedGid] = useState(gid);
+  const [selectedUid, setSelectedUid] = useState(uid);
+
+  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
+  if (selectedUid === undefined) return <MemberSelector gid={selectedGid} onSelect={setSelectedUid} />;
+  return <MemberInfo gid={selectedGid} uid={selectedUid} />;
 }

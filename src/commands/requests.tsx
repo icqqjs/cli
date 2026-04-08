@@ -1,8 +1,8 @@
 import React from "react";
 import { Text, Box } from "ink";
-import { IpcCommand } from "../components/IpcCommand.js";
-import { Actions } from "../daemon/protocol.js";
-import { Table } from "../components/Table.js";
+import { IpcCommand } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
+import { Table } from "@/components/Table.js";
 
 export const description = "查看待处理的好友/群请求";
 

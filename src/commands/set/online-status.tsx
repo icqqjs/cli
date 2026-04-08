@@ -1,8 +1,8 @@
 import React from "react";
 import zod from "zod";
 import { argument } from "pastel";
-import { IpcMutate } from "../../components/IpcCommand.js";
-import { Actions } from "../../daemon/protocol.js";
+import { IpcMutate } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "设置在线状态 (11=在线 31=离开 41=隐身 50=忙碌 60=Q我吧 70=请勿打扰)";
 

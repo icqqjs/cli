@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import zod from "zod";
 import { argument } from "pastel";
-import { IpcMutate } from "../../components/IpcCommand.js";
-import { Actions } from "../../daemon/protocol.js";
-import { GroupSelector } from "../../components/GroupSelector.js";
-import { FriendSelector } from "../../components/FriendSelector.js";
+import { IpcMutate } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
+import { FriendSelector } from "@/components/FriendSelector.js";
 
 export const description = "邀请好友入群";
 

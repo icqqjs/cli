@@ -4,10 +4,10 @@ import type { Client } from "@icqqjs/icqq";
 import type { IpcRequest, IpcMessage } from "./protocol.js";
 import { Actions } from "./protocol.js";
 import { handleRequest } from "./handlers.js";
-import { stringifyMessage } from "../lib/parse-message.js";
-import { loadConfig, saveConfig } from "../lib/config.js";
-import { getSocketPath } from "../lib/paths.js";
-import { sendNotification } from "../lib/notify.js";
+import { stringifyMessage } from "@/lib/parse-message.js";
+import { loadConfig, saveConfig } from "@/lib/config.js";
+import { getSocketPath } from "@/lib/paths.js";
+import { sendNotification } from "@/lib/notify.js";
 
 type Subscription = {
   type: "group" | "private";

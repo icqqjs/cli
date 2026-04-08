@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
-import { Spinner } from "../components/Spinner.js";
-import { loadConfig } from "../lib/config.js";
+import { Spinner } from "@/components/Spinner.js";
+import { loadConfig } from "@/lib/config.js";
 import {
   isDaemonRunning,
   stopDaemon,
-} from "../daemon/lifecycle.js";
+} from "@/daemon/lifecycle.js";
 
 export const description = "停止守护进程";
 

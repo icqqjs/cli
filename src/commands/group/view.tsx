@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Text, Box, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
-import { Spinner } from "../../components/Spinner.js";
-import { GroupSelector } from "../../components/GroupSelector.js";
-import { loadConfig } from "../../lib/config.js";
-import { IpcClient } from "../../lib/ipc-client.js";
-import { isDaemonRunning } from "../../daemon/lifecycle.js";
-import { Actions } from "../../daemon/protocol.js";
+import { Spinner } from "@/components/Spinner.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
+import { loadConfig } from "@/lib/config.js";
+import { IpcClient } from "@/lib/ipc-client.js";
+import { isDaemonRunning } from "@/daemon/lifecycle.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "查看群资料";
 
@@ -29,14 +29,11 @@ function formatDate(ts: number): string {
   return new Date(ts * 1000).toLocaleString("zh-CN");
 }
 
-export default function ViewGroup({ args: [gid] }: Props) {
+function GroupInfo({ gid }: { gid: number }) {
   const { exit } = useApp();
-  const [selectedGid, setSelectedGid] = useState(gid);
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<any>(null);
   const [error, setError] = useState("");
-
-  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
 
   useEffect(() => {
     void (async () => {
@@ -48,7 +45,7 @@ export default function ViewGroup({ args: [gid] }: Props) {
           throw new Error("守护进程未运行，请先执行 icqq login");
 
         const ipc = await IpcClient.connect(uin);
-        const resp = await ipc.request(Actions.GET_GROUP_INFO, { gid: selectedGid });
+        const resp = await ipc.request(Actions.GET_GROUP_INFO, { gid });
         ipc.close();
 
         if (!resp.ok) throw new Error(resp.error ?? "请求失败");
@@ -58,7 +55,7 @@ export default function ViewGroup({ args: [gid] }: Props) {
       }
       setLoading(false);
     })();
-  }, [selectedGid]);
+  }, [gid]);
 
   useEffect(() => {
     if (!loading) {
@@ -91,4 +88,10 @@ export default function ViewGroup({ args: [gid] }: Props) {
       {info.grade !== undefined && <Text>等级: {info.grade}</Text>}
     </Box>
   );
+}
+
+export default function ViewGroup({ args: [gid] }: Props) {
+  const [selectedGid, setSelectedGid] = useState(gid);
+  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
+  return <GroupInfo gid={selectedGid} />;
 }

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Text, Box, useApp } from "ink";
-import { Spinner } from "../components/Spinner.js";
-import { loadConfig } from "../lib/config.js";
-import { isDaemonRunning, getDaemonPid } from "../daemon/lifecycle.js";
-import { IpcClient } from "../lib/ipc-client.js";
-import { Actions } from "../daemon/protocol.js";
+import { Spinner } from "@/components/Spinner.js";
+import { loadConfig } from "@/lib/config.js";
+import { isDaemonRunning, getDaemonPid } from "@/daemon/lifecycle.js";
+import { IpcClient } from "@/lib/ipc-client.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "查看守护进程状态";
 

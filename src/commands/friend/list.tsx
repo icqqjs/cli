@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
 import { Text, useApp } from "ink";
-import { Spinner } from "../../components/Spinner.js";
-import { Table } from "../../components/Table.js";
-import { useIpcRequest } from "../../lib/use-ipc.js";
-import { Actions } from "../../daemon/protocol.js";
+import { Spinner } from "@/components/Spinner.js";
+import { Table } from "@/components/Table.js";
+import { useIpcRequest } from "@/lib/use-ipc.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "查看好友列表";
 
