@@ -16,9 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      - uses: pnpm/action-setup@v5
 
       - uses: actions/setup-node@v5
         with:
