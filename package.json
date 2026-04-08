@@ -28,7 +28,13 @@
     "type": "git",
     "url": "https://github.com/icqqjs/cli.git"
   },
-  "author": "",
+  "author": {
+    "name": "凉菜",
+    "email": "admin@liucl.cn"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "license": "ISC",
   "packageManager": "pnpm@10.7.0",
   "devDependencies": {
