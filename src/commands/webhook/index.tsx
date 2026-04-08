@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
-import { Spinner } from "../../components/Spinner.js";
-import { loadConfig } from "../../lib/config.js";
-import { isDaemonRunning } from "../../daemon/lifecycle.js";
-import { IpcClient } from "../../lib/ipc-client.js";
-import { Actions } from "../../daemon/protocol.js";
+import { Spinner } from "@/components/Spinner.js";
+import { loadConfig } from "@/lib/config.js";
+import { isDaemonRunning } from "@/daemon/lifecycle.js";
+import { IpcClient } from "@/lib/ipc-client.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "查看当前 Webhook 配置";
 

@@ -1,6 +1,6 @@
 import type { Client } from "@icqqjs/icqq";
 import { Actions, type IpcRequest, type IpcResponse } from "./protocol.js";
-import { parseMessage, stringifyMessage } from "../lib/parse-message.js";
+import { parseMessage, stringifyMessage } from "@/lib/parse-message.js";
 import fs from "node:fs/promises";
 
 type Handler = (

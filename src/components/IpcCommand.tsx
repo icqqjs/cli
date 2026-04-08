@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
 import { Spinner } from "./Spinner.js";
-import { loadConfig } from "../lib/config.js";
-import { IpcClient } from "../lib/ipc-client.js";
-import { isDaemonRunning } from "../daemon/lifecycle.js";
+import { loadConfig } from "@/lib/config.js";
+import { IpcClient } from "@/lib/ipc-client.js";
+import { isDaemonRunning } from "@/daemon/lifecycle.js";
 
 type Props = {
   action: string;

@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Text, Box, useInput } from "ink";
 import fs from "node:fs";
 import path from "node:path";
-import type { IpcClient } from "../lib/ipc-client.js";
-import type { IpcEvent } from "../daemon/protocol.js";
-import { Actions } from "../daemon/protocol.js";
+import type { IpcClient } from "@/lib/ipc-client.js";
+import type { IpcEvent } from "@/daemon/protocol.js";
+import { Actions } from "@/daemon/protocol.js";
 
 // ── Popular QQ face emojis (id → name) ──
 const FACE_MAP: [number, string][] = [

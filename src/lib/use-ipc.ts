@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { IpcClient } from "./ipc-client.js";
 import { loadConfig } from "./config.js";
-import { isDaemonRunning } from "../daemon/lifecycle.js";
+import { isDaemonRunning } from "@/daemon/lifecycle.js";
 
 export function useIpcRequest(
   action: string,

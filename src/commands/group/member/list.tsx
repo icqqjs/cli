@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
-import { Spinner } from "../../../components/Spinner.js";
-import { Table } from "../../../components/Table.js";
-import { GroupSelector } from "../../../components/GroupSelector.js";
-import { useIpcRequest } from "../../../lib/use-ipc.js";
-import { Actions } from "../../../daemon/protocol.js";
+import { Spinner } from "@/components/Spinner.js";
+import { Table } from "@/components/Table.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
+import { useIpcRequest } from "@/lib/use-ipc.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "查看群成员列表";
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, Box } from "ink";
-import { IpcCommand } from "../components/IpcCommand.js";
-import { Actions } from "../daemon/protocol.js";
+import { IpcCommand } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "查看当前账号资料";
 

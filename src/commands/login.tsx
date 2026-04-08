@@ -3,24 +3,24 @@ import { Text, Box, useApp } from "ink";
 import zod from "zod";
 import { option } from "pastel";
 import { createClient, type Platform } from "@icqqjs/icqq";
-import { LoginFlow } from "../components/LoginFlow.js";
-import { Spinner } from "../components/Spinner.js";
+import { LoginFlow } from "@/components/LoginFlow.js";
+import { Spinner } from "@/components/Spinner.js";
 import {
   loadConfig,
   saveConfig,
   setAccountConfig,
   getAccountConfig,
-} from "../lib/config.js";
+} from "@/lib/config.js";
 import {
   getAccountDir,
   getIcqqHome,
   getTmpDir,
-} from "../lib/paths.js";
+} from "@/lib/paths.js";
 import {
   spawnDaemon,
   isDaemonRunning,
   stopDaemon,
-} from "../daemon/lifecycle.js";
+} from "@/daemon/lifecycle.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 

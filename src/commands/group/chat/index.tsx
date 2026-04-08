@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
-import { Spinner } from "../../../components/Spinner.js";
-import { ChatSession } from "../../../components/ChatSession.js";
-import { GroupSelector } from "../../../components/GroupSelector.js";
-import { loadConfig } from "../../../lib/config.js";
-import { IpcClient } from "../../../lib/ipc-client.js";
-import { isDaemonRunning } from "../../../daemon/lifecycle.js";
+import { Spinner } from "@/components/Spinner.js";
+import { ChatSession } from "@/components/ChatSession.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
+import { loadConfig } from "@/lib/config.js";
+import { IpcClient } from "@/lib/ipc-client.js";
+import { isDaemonRunning } from "@/daemon/lifecycle.js";
 
 export const description = "进入群聊天模式";
 

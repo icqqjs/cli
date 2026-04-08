@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import { Text, Box } from "ink";
 import zod from "zod";
 import { argument, option } from "pastel";
-import { IpcCommand } from "../../../components/IpcCommand.js";
-import { Actions } from "../../../daemon/protocol.js";
-import { Table } from "../../../components/Table.js";
-import { GroupSelector } from "../../../components/GroupSelector.js";
+import { IpcCommand } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
+import { Table } from "@/components/Table.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
 
 export const description = "列出群文件";
 

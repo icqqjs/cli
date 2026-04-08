@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Text, Box, useInput } from "ink";
 import { Spinner } from "./Spinner.js";
-import { loadConfig } from "../lib/config.js";
-import { IpcClient } from "../lib/ipc-client.js";
-import { isDaemonRunning } from "../daemon/lifecycle.js";
-import { Actions } from "../daemon/protocol.js";
+import { loadConfig } from "@/lib/config.js";
+import { IpcClient } from "@/lib/ipc-client.js";
+import { isDaemonRunning } from "@/daemon/lifecycle.js";
+import { Actions } from "@/daemon/protocol.js";
 
 type FriendItem = {
   user_id: number;

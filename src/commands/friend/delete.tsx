@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import zod from "zod";
 import { argument, option } from "pastel";
-import { IpcMutate } from "../../components/IpcCommand.js";
-import { Actions } from "../../daemon/protocol.js";
-import { FriendSelector } from "../../components/FriendSelector.js";
+import { IpcMutate } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
+import { FriendSelector } from "@/components/FriendSelector.js";
 
 export const description = "删除好友";
 

@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
-import { createIcqqClient } from "../lib/client.js";
-import { loadConfig, getAccountConfig } from "../lib/config.js";
-import { getAccountDir, getPidPath, getSocketPath } from "../lib/paths.js";
-import { sendNotification } from "../lib/notify.js";
+import { createIcqqClient } from "@/lib/client.js";
+import { loadConfig, getAccountConfig } from "@/lib/config.js";
+import { getAccountDir, getPidPath, getSocketPath } from "@/lib/paths.js";
+import { sendNotification } from "@/lib/notify.js";
 import { DaemonServer } from "./server.js";
 
 async function main() {

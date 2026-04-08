@@ -2,8 +2,8 @@ import React from "react";
 import { Text, Box } from "ink";
 import zod from "zod";
 import { argument, option } from "pastel";
-import { IpcCommand } from "../../../components/IpcCommand.js";
-import { Actions } from "../../../daemon/protocol.js";
+import { IpcCommand } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "查看私聊消息记录";
 

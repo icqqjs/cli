@@ -1,8 +1,8 @@
 import React from "react";
 import zod from "zod";
 import { argument, option } from "pastel";
-import { IpcMutate } from "../../components/IpcCommand.js";
-import { Actions } from "../../daemon/protocol.js";
+import { IpcMutate } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "接受好友/群请求";
 

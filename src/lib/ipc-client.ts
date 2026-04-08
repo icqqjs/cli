@@ -6,7 +6,7 @@ import type {
   IpcResponse,
   IpcEvent,
   IpcMessage,
-} from "../daemon/protocol.js";
+} from "@/daemon/protocol.js";
 
 export class IpcClient {
   private socket: net.Socket;

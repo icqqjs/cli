@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
-import { Spinner } from "../../../components/Spinner.js";
-import { GroupSelector } from "../../../components/GroupSelector.js";
-import { loadConfig } from "../../../lib/config.js";
-import { IpcClient } from "../../../lib/ipc-client.js";
-import { isDaemonRunning } from "../../../daemon/lifecycle.js";
-import { Actions } from "../../../daemon/protocol.js";
+import { Spinner } from "@/components/Spinner.js";
+import { GroupSelector } from "@/components/GroupSelector.js";
+import { loadConfig } from "@/lib/config.js";
+import { IpcClient } from "@/lib/ipc-client.js";
+import { isDaemonRunning } from "@/daemon/lifecycle.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "设置群名称";
 
@@ -30,14 +30,11 @@ type Props = {
   args: zod.infer<typeof args>;
 };
 
-export default function SetGroupName({ args: [gid, name] }: Props) {
+function SetName({ gid, name }: { gid: number; name?: string }) {
   const { exit } = useApp();
-  const [selectedGid, setSelectedGid] = useState(gid);
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-
-  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
 
   useEffect(() => {
     void (async () => {
@@ -50,7 +47,7 @@ export default function SetGroupName({ args: [gid, name] }: Props) {
 
         const ipc = await IpcClient.connect(uin);
         const resp = await ipc.request(Actions.SET_GROUP_NAME, {
-          gid: selectedGid,
+          gid,
           name,
         });
         ipc.close();
@@ -62,7 +59,7 @@ export default function SetGroupName({ args: [gid, name] }: Props) {
       }
       setLoading(false);
     })();
-  }, [selectedGid, name]);
+  }, [gid, name]);
 
   useEffect(() => {
     if (!loading) {
@@ -76,7 +73,13 @@ export default function SetGroupName({ args: [gid, name] }: Props) {
 
   return (
     <Text color="green">
-      ✔ 已将群 {selectedGid} 的名称设置为「{name}」
+      ✔ 已将群 {gid} 的名称设置为「{name}」
     </Text>
   );
+}
+
+export default function SetGroupName({ args: [gid, name] }: Props) {
+  const [selectedGid, setSelectedGid] = useState(gid);
+  if (selectedGid === undefined) return <GroupSelector onSelect={setSelectedGid} />;
+  return <SetName gid={selectedGid} name={name} />;
 }

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Text, Box, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
-import { Spinner } from "../../components/Spinner.js";
-import { FriendSelector } from "../../components/FriendSelector.js";
-import { loadConfig } from "../../lib/config.js";
-import { IpcClient } from "../../lib/ipc-client.js";
-import { isDaemonRunning } from "../../daemon/lifecycle.js";
-import { Actions } from "../../daemon/protocol.js";
+import { Spinner } from "@/components/Spinner.js";
+import { FriendSelector } from "@/components/FriendSelector.js";
+import { loadConfig } from "@/lib/config.js";
+import { IpcClient } from "@/lib/ipc-client.js";
+import { isDaemonRunning } from "@/daemon/lifecycle.js";
+import { Actions } from "@/daemon/protocol.js";
 
 export const description = "查看好友资料";
 
@@ -24,14 +24,11 @@ type Props = {
   args: zod.infer<typeof args>;
 };
 
-export default function ViewFriend({ args: [uid] }: Props) {
+function FriendInfo({ uid }: { uid: number }) {
   const { exit } = useApp();
-  const [selectedUid, setSelectedUid] = useState(uid);
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<any>(null);
   const [error, setError] = useState("");
-
-  if (selectedUid === undefined) return <FriendSelector onSelect={setSelectedUid} />;
 
   useEffect(() => {
     void (async () => {
@@ -43,7 +40,7 @@ export default function ViewFriend({ args: [uid] }: Props) {
           throw new Error("守护进程未运行，请先执行 icqq login");
 
         const ipc = await IpcClient.connect(uin);
-        const resp = await ipc.request(Actions.GET_FRIEND_INFO, { uid: selectedUid });
+        const resp = await ipc.request(Actions.GET_FRIEND_INFO, { uid });
         ipc.close();
 
         if (!resp.ok) throw new Error(resp.error ?? "请求失败");
@@ -53,7 +50,7 @@ export default function ViewFriend({ args: [uid] }: Props) {
       }
       setLoading(false);
     })();
-  }, [selectedUid]);
+  }, [uid]);
 
   useEffect(() => {
     if (!loading) {
@@ -79,4 +76,10 @@ export default function ViewFriend({ args: [uid] }: Props) {
       {info.area && <Text>地区: {info.area}</Text>}
     </Box>
   );
+}
+
+export default function ViewFriend({ args: [uid] }: Props) {
+  const [selectedUid, setSelectedUid] = useState(uid);
+  if (selectedUid === undefined) return <FriendSelector onSelect={setSelectedUid} />;
+  return <FriendInfo uid={selectedUid} />;
 }
