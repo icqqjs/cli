@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { IpcClient } from "./ipc-client.js";
-import { loadConfig } from "./config.js";
+import { resolveUin } from "./config.js";
 import { isDaemonRunning } from "@/daemon/lifecycle.js";
 
 export function useIpcRequest(
@@ -10,23 +10,24 @@ export function useIpcRequest(
   loading: boolean;
   data: unknown;
   error: string;
+  uin: number | null;
 } {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<unknown>(null);
   const [error, setError] = useState("");
+  const [uin, setUin] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     void (async () => {
       try {
-        const config = await loadConfig();
-        const uin = config.defaultUin;
-        if (!uin) throw new Error("未找到已登录账号，请先执行 icqq login");
-        if (!(await isDaemonRunning(uin)))
+        const resolvedUin = await resolveUin();
+        if (!cancelled) setUin(resolvedUin);
+        if (!(await isDaemonRunning(resolvedUin)))
           throw new Error("守护进程未运行，请先执行 icqq login");
 
-        const ipc = await IpcClient.connect(uin);
+        const ipc = await IpcClient.connect(resolvedUin);
         const resp = await ipc.request(action, params);
         ipc.close();
 
@@ -44,5 +45,5 @@ export function useIpcRequest(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [action, JSON.stringify(params)]);
 
-  return { loading, data, error };
+  return { loading, data, error, uin };
 }

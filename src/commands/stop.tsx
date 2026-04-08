@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
+import zod from "zod";
+import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
-import { loadConfig } from "@/lib/config.js";
+import { resolveUin } from "@/lib/config.js";
 import {
   isDaemonRunning,
   stopDaemon,
@@ -9,7 +11,20 @@ import {
 
 export const description = "停止守护进程";
 
-export default function Stop() {
+export const args = zod.tuple([
+  zod.coerce.number().optional().describe(
+    argument({
+      name: "uin",
+      description: "要停止的QQ号（不指定则使用当前账号）",
+    }),
+  ),
+]);
+
+type Props = {
+  args: zod.infer<typeof args>;
+};
+
+export default function Stop({ args: [argUin] }: Props) {
   const { exit } = useApp();
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -18,9 +33,7 @@ export default function Stop() {
   useEffect(() => {
     void (async () => {
       try {
-        const config = await loadConfig();
-        const uin = config.defaultUin;
-        if (!uin) throw new Error("未找到已登录账号");
+        const uin = argUin ?? await resolveUin();
 
         if (!(await isDaemonRunning(uin))) {
           setMessage(`守护进程未运行 (账号 ${uin})`);
@@ -40,14 +53,14 @@ export default function Stop() {
       }
       setLoading(false);
     })();
-  }, []);
+  }, [argUin]);
 
   useEffect(() => {
     if (!loading) {
-      const timer = setTimeout(() => exit(), 100);
+      const timer = setTimeout(() => exit(), message && !success ? 2000 : 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, exit]);
+  }, [loading, message, success, exit]);
 
   if (loading) return <Spinner label="正在停止守护进程…" />;
 

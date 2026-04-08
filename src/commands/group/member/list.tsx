@@ -25,19 +25,19 @@ type Props = {
 
 function MemberList({ gid }: { gid: number }) {
   const { exit } = useApp();
-  const { loading, data, error } = useIpcRequest(
+  const { loading, data, error, uin } = useIpcRequest(
     Actions.LIST_GROUP_MEMBERS,
     { gid },
   );
 
   useEffect(() => {
     if (!loading) {
-      const timer = setTimeout(() => exit(), 100);
+      const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, exit]);
+  }, [loading, error, exit]);
 
-  if (loading) return <Spinner label={`加载群 ${gid} 成员列表…`} />;
+  if (loading) return <Spinner label={`${uin ? `[${uin}] ` : ""}加载群 ${gid} 成员列表…`} />;
   if (error) return <Text color="red">✖ {error}</Text>;
 
   const members = (data as any[]) ?? [];

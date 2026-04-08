@@ -9,16 +9,16 @@ export const description = "查看群组列表";
 
 export default function ListGroup() {
   const { exit } = useApp();
-  const { loading, data, error } = useIpcRequest(Actions.LIST_GROUPS);
+  const { loading, data, error, uin } = useIpcRequest(Actions.LIST_GROUPS);
 
   useEffect(() => {
     if (!loading) {
-      const timer = setTimeout(() => exit(), 100);
+      const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, exit]);
+  }, [loading, error, exit]);
 
-  if (loading) return <Spinner label="加载群组列表…" />;
+  if (loading) return <Spinner label={`${uin ? `[${uin}] ` : ""}加载群列表…`} />;
   if (error) return <Text color="red">✖ {error}</Text>;
 
   const groups = (data as any[]) ?? [];

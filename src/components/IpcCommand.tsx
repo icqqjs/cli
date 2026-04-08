@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
 import { Spinner } from "./Spinner.js";
-import { loadConfig } from "@/lib/config.js";
-import { IpcClient } from "@/lib/ipc-client.js";
-import { isDaemonRunning } from "@/daemon/lifecycle.js";
+import { useIpcConnection } from "@/lib/use-ipc-connection.js";
 
 type Props = {
   action: string;
@@ -14,19 +12,16 @@ type Props = {
 
 export function IpcCommand({ action, params, render, loadingText }: Props) {
   const { exit } = useApp();
+  const { ipc, error: connError, uin } = useIpcConnection();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!ipc) return;
+
     void (async () => {
       try {
-        const config = await loadConfig();
-        const uin = config.defaultUin;
-        if (!uin) throw new Error("未找到已登录账号，请先执行 icqq login");
-        if (!(await isDaemonRunning(uin)))
-          throw new Error("守护进程未运行，请先执行 icqq login");
-        const ipc = await IpcClient.connect(uin);
         const resp = await ipc.request(action, params ?? {});
         ipc.close();
         if (!resp.ok) throw new Error(resp.error ?? "请求失败");
@@ -37,16 +32,18 @@ export function IpcCommand({ action, params, render, loadingText }: Props) {
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ipc]);
 
   useEffect(() => {
-    if (!loading) {
-      const timer = setTimeout(() => exit(), 100);
+    if (!loading || connError) {
+      const hasError = !!(connError || error);
+      const timer = setTimeout(() => exit(), hasError ? 2000 : 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, exit]);
+  }, [loading, connError, error, exit]);
 
-  if (loading) return <Spinner label={loadingText ?? "执行中…"} />;
+  if (connError) return <Text color="red">✖ {connError}</Text>;
+  if (loading) return <Spinner label={`${uin ? `[${uin}] ` : ""}${loadingText ?? "执行中…"}`} />;
   if (error) return <Text color="red">✖ {error}</Text>;
 
   return <>{render(data)}</>;

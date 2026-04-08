@@ -5,7 +5,7 @@ import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
 import { GroupSelector } from "@/components/GroupSelector.js";
 import { MemberSelector } from "@/components/MemberSelector.js";
-import { loadConfig } from "@/lib/config.js";
+import { resolveUin } from "@/lib/config.js";
 import { IpcClient } from "@/lib/ipc-client.js";
 import { isDaemonRunning } from "@/daemon/lifecycle.js";
 import { Actions } from "@/daemon/protocol.js";
@@ -51,9 +51,7 @@ function MemberInfo({ gid, uid }: { gid: number; uid: number }) {
   useEffect(() => {
     void (async () => {
       try {
-        const config = await loadConfig();
-        const uin = config.defaultUin;
-        if (!uin) throw new Error("未找到已登录账号，请先执行 icqq login");
+        const uin = await resolveUin();
         if (!(await isDaemonRunning(uin)))
           throw new Error("守护进程未运行，请先执行 icqq login");
 
@@ -75,10 +73,10 @@ function MemberInfo({ gid, uid }: { gid: number; uid: number }) {
 
   useEffect(() => {
     if (!loading) {
-      const timer = setTimeout(() => exit(), 100);
+      const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, exit]);
+  }, [loading, error, exit]);
 
   if (loading) return <Spinner label="查询群成员资料…" />;
   if (error) return <Text color="red">✖ {error}</Text>;

@@ -5,7 +5,7 @@ import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
 import { ChatSession } from "@/components/ChatSession.js";
 import { GroupSelector } from "@/components/GroupSelector.js";
-import { loadConfig } from "@/lib/config.js";
+import { resolveUin } from "@/lib/config.js";
 import { IpcClient } from "@/lib/ipc-client.js";
 import { isDaemonRunning } from "@/daemon/lifecycle.js";
 
@@ -33,9 +33,7 @@ export default function GroupChat({ args: [id] }: Props) {
   useEffect(() => {
     void (async () => {
       try {
-        const config = await loadConfig();
-        const uin = config.defaultUin;
-        if (!uin) throw new Error("未找到已登录账号，请先执行 icqq login");
+        const uin = await resolveUin();
         if (!(await isDaemonRunning(uin)))
           throw new Error("守护进程未运行，请先执行 icqq login");
 
