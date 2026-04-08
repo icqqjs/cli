@@ -20,7 +20,7 @@ export default function FriendRemark({ args: [uid, remark] }: Props) {
 
   return (
     <IpcMutate
-      action={Actions.FRIEND_SET_REMARK}
+      action={Actions.FRIEND_REMARK}
       params={{ user_id: selectedUid, remark: remark! }}
       loadingText="设置备注…"
       successText={`已将好友 ${selectedUid} 的备注设为「${remark}」`}

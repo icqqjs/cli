@@ -15,7 +15,7 @@ type Props = { args: zod.infer<typeof args> };
 export default function EssenceRemove({ args: [message_id] }: Props) {
   return (
     <IpcMutate
-      action={Actions.GROUP_REMOVE_ESSENCE}
+      action={Actions.GROUP_ESSENCE_REMOVE}
       params={{ message_id }}
       loadingText="取消精华…"
       successText="已取消精华消息"

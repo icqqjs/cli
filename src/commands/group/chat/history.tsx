@@ -20,7 +20,7 @@ type Props = { args: zod.infer<typeof args>; options: zod.infer<typeof options> 
 export default function HistoryGroup({ args: [gid], options: { count } }: Props) {
   return (
     <IpcCommand
-      action={Actions.GET_GROUP_MSG_HISTORY}
+      action={Actions.HISTORY_GROUP}
       params={{ group_id: gid, count }}
       loadingText="获取消息记录…"
       render={(data: any[]) => (
