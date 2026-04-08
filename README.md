@@ -37,14 +37,23 @@ npm install -g @icqqjs/cli
 ## 快速开始
 
 ```bash
-# 密码登录
-icqq login -q <QQ号> --pwd <密码> --plm 2
-
-# 扫码登录
+# 交互式登录
 icqq login
 
-# 快速重连（使用已保存的配置）
+# 快速重连（使用已保存的 token）
 icqq login -r
+
+# 指定账号快速重连
+icqq login -q 12345 -r
+```
+
+## 多实例支持
+
+通过 `-u` 全局参数或 `ICQQ_CURRENT_UIN` 环境变量指定操作的账号，默认使用 `defaultUin`。
+
+```bash
+icqq -u 12345 profile
+ICQQ_CURRENT_UIN=12345 icqq friend list
 ```
 
 ## 命令一览
@@ -54,17 +63,26 @@ icqq login -r
 | 命令 | 说明 |
 |------|------|
 | `icqq login` | 登录 QQ 账号并启动守护进程 |
-| `icqq login -r` | 使用已保存配置快速重连 |
-| `icqq status` | 查看守护进程状态 |
+| `icqq login -r` | 使用已保存 token 快速重连 |
+| `icqq status` | 查看所有守护进程状态 |
 | `icqq stop` | 停止守护进程 |
 | `icqq profile` | 查看个人资料 |
 | `icqq requests` | 查看待处理的好友/群请求 |
+
+### 配置
+
+| 命令 | 说明 |
+|------|------|
+| `icqq config get` | 查看所有配置 |
+| `icqq config get <key>` | 查看指定配置项 |
+| `icqq config set <key> <value>` | 设置配置项 |
 
 ### 消息
 
 | 命令 | 说明 |
 |------|------|
-| `icqq send <type> <id> <message>` | 发送消息（type: private/group） |
+| `icqq friend send <qq> <message>` | 发送私聊消息 |
+| `icqq group send <gid> <message>` | 发送群消息 |
 | `icqq friend chat <qq>` | 进入好友交互聊天 |
 | `icqq group chat <gid>` | 进入群交互聊天 |
 | `icqq friend chat history <qq>` | 查看好友聊天记录 |
@@ -88,6 +106,7 @@ icqq login -r
 |------|------|
 | `icqq friend list` | 好友列表 |
 | `icqq friend view <qq>` | 查看好友资料 |
+| `icqq friend send <qq> <message>` | 发送私聊消息 |
 | `icqq friend delete <qq>` | 删除好友 |
 | `icqq friend like <qq>` | 点赞 |
 | `icqq friend poke <qq>` | 戳一戳 |
@@ -99,6 +118,7 @@ icqq login -r
 |------|------|
 | `icqq group list` | 群列表 |
 | `icqq group view <gid>` | 查看群信息 |
+| `icqq group send <gid> <message>` | 发送群消息 |
 | `icqq group member list <gid>` | 群成员列表 |
 | `icqq group member view <gid> <qq>` | 查看群成员资料 |
 | `icqq group invite <gid> <qq>` | 邀请入群 |
@@ -156,6 +176,9 @@ icqq login -r
 | `icqq webhook` | 查看 Webhook 配置 |
 | `icqq webhook set <url>` | 设置 Webhook 推送地址 |
 | `icqq webhook off` | 关闭 Webhook 推送 |
+| `icqq notify` | 查看通知状态 |
+| `icqq notify on` | 开启系统通知 |
+| `icqq notify off` | 关闭系统通知 |
 
 ## 架构
 

@@ -43,3 +43,19 @@ export function setAccountConfig(
 ): void {
   config.accounts[String(uin)] = account;
 }
+
+/**
+ * Resolve the target uin from (in priority order):
+ *   ICQQ_CURRENT_UIN env  →  config.defaultUin
+ * Throws if nothing is found.
+ */
+export async function resolveUin(): Promise<number> {
+  const envUin = process.env.ICQQ_CURRENT_UIN;
+  if (envUin) {
+    const n = Number(envUin);
+    if (!Number.isNaN(n) && n > 0) return n;
+  }
+  const config = await loadConfig();
+  if (config.defaultUin) return config.defaultUin;
+  throw new Error("未找到已登录账号，请先执行 icqq login");
+}

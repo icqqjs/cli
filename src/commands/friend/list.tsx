@@ -9,16 +9,16 @@ export const description = "查看好友列表";
 
 export default function ListFriend() {
   const { exit } = useApp();
-  const { loading, data, error } = useIpcRequest(Actions.LIST_FRIENDS);
+  const { loading, data, error, uin } = useIpcRequest(Actions.LIST_FRIENDS);
 
   useEffect(() => {
     if (!loading) {
-      const timer = setTimeout(() => exit(), 100);
+      const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, exit]);
+  }, [loading, error, exit]);
 
-  if (loading) return <Spinner label="加载好友列表…" />;
+  if (loading) return <Spinner label={`${uin ? `[${uin}] ` : ""}加载好友列表…`} />;
   if (error) return <Text color="red">✖ {error}</Text>;
 
   const friends = (data as any[]) ?? [];

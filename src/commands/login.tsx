@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Text, Box, useApp } from "ink";
+import { Text, Box, useApp, useInput } from "ink";
 import zod from "zod";
 import { option } from "pastel";
 import { createClient, type Platform } from "@icqqjs/icqq";
@@ -10,10 +10,10 @@ import {
   saveConfig,
   setAccountConfig,
   getAccountConfig,
+  type AccountConfig,
 } from "@/lib/config.js";
 import {
   getAccountDir,
-  getIcqqHome,
   getTmpDir,
 } from "@/lib/paths.js";
 import {
@@ -26,6 +26,14 @@ import path from "node:path";
 
 export const description = "登录 QQ 账号并启动守护进程";
 
+const PLATFORMS = [
+  { value: 1, label: "Android" },
+  { value: 2, label: "aPad" },
+  { value: 3, label: "Watch" },
+  { value: 4, label: "iMac" },
+  { value: 5, label: "iPad" },
+] as const;
+
 export const options = zod.object({
   q: zod
     .number()
@@ -36,53 +44,30 @@ export const options = zod.object({
         alias: "q",
       }),
     ),
-  pwd: zod
-    .string()
-    .optional()
-    .describe(
-      option({
-        description: "密码（不指定则扫码登录）",
-      }),
-    ),
-  plm: zod
-    .number()
-    .optional()
-    .describe(
-      option({
-        description: "平台 1=Android 2=aPad 3=Watch 4=iMac 5=iPad",
-      }),
-    ),
-  sau: zod
-    .string()
-    .optional()
-    .describe(
-      option({
-        description: "sign_api_url",
-      }),
-    ),
-  ver: zod
-    .string()
-    .optional()
-    .describe(
-      option({
-        description: "协议版本号",
-      }),
-    ),
-  config: zod
-    .string()
-    .optional()
-    .describe(
-      option({
-        description: "登录配置文件路径 (JSON)",
-        alias: "c",
-      }),
-    ),
-  reconnect: zod
+  p: zod
     .boolean()
     .default(false)
     .describe(
       option({
-        description: "使用已保存配置快速重连（无需重复输入参数）",
+        description: "密码登录（交互式输入密码）",
+        alias: "p",
+      }),
+    ),
+  c: zod
+    .string()
+    .optional()
+    .describe(
+      option({
+        description: "配置文件路径",
+        alias: "c",
+      }),
+    ),
+  r: zod
+    .boolean()
+    .default(false)
+    .describe(
+      option({
+        description: "快速重连（使用已保存的 token，跳过登录向导）",
         alias: "r",
       }),
     ),
@@ -92,92 +77,289 @@ type Props = {
   options: zod.infer<typeof options>;
 };
 
-type Status = "login" | "post-login" | "starting-daemon" | "done" | "error";
+type WizardStep = "qq" | "platform" | "sign_api" | "password" | "confirm";
+type Status = "wizard" | "login" | "post-login" | "starting-daemon" | "done" | "error";
+
+/* ── Wizard prompt component ────────────────────────────── */
+
+function WizardPrompt({
+  onComplete,
+  initialQQ,
+  needPassword,
+  savedAccount,
+}: {
+  onComplete: (result: {
+    qq?: number;
+    platform: number;
+    signApiUrl: string;
+    password?: string;
+  }) => void;
+  initialQQ?: number;
+  needPassword: boolean;
+  savedAccount?: AccountConfig;
+}) {
+  const steps: WizardStep[] = [];
+  if (!initialQQ) steps.push("qq");
+  steps.push("platform", "sign_api");
+  if (needPassword) steps.push("password");
+  steps.push("confirm");
+
+  const [stepIdx, setStepIdx] = useState(0);
+  const [inputValue, setInputValue] = useState("");
+
+  const [qq, setQQ] = useState(initialQQ ? String(initialQQ) : "");
+  const [platform, setPlatform] = useState(savedAccount?.platform ?? 1);
+  const [signApiUrl, setSignApiUrl] = useState(savedAccount?.signApiUrl ?? "");
+  const [password, setPassword] = useState("");
+
+  const currentStep = steps[stepIdx]!;
+
+  const advance = () => {
+    setInputValue("");
+    if (stepIdx < steps.length - 1) {
+      setStepIdx(stepIdx + 1);
+    }
+  };
+
+  useInput((input, key) => {
+    if (currentStep === "platform") {
+      const num = Number(input);
+      if (num >= 1 && num <= 5) {
+        setPlatform(num);
+        advance();
+      }
+      return;
+    }
+
+    if (currentStep === "confirm") {
+      if (key.return) {
+        onComplete({
+          qq: qq ? Number(qq) : undefined,
+          platform,
+          signApiUrl,
+          password: password || undefined,
+        });
+      }
+      return;
+    }
+
+    // Text input steps: qq, sign_api, password
+    if (key.return) {
+      if (currentStep === "qq") {
+        setQQ(inputValue);
+      } else if (currentStep === "sign_api") {
+        setSignApiUrl(inputValue);
+      } else if (currentStep === "password") {
+        setPassword(inputValue);
+      }
+      advance();
+      return;
+    }
+    if (key.backspace || key.delete) {
+      setInputValue((v) => v.slice(0, -1));
+      return;
+    }
+    if (input && !key.ctrl && !key.meta) {
+      setInputValue((v) => v + input);
+    }
+  });
+
+  // Pre-fill input value when entering a step with saved data
+  useEffect(() => {
+    if (currentStep === "sign_api" && savedAccount?.signApiUrl) {
+      setInputValue(savedAccount.signApiUrl);
+    }
+  }, [currentStep, savedAccount?.signApiUrl]);
+
+  const completedEntries: [string, string][] = [];
+  for (let i = 0; i < stepIdx; i++) {
+    const s = steps[i]!;
+    if (s === "qq") completedEntries.push(["QQ号", qq || "(扫码登录)"]);
+    if (s === "platform") {
+      const p = PLATFORMS.find((x) => x.value === platform);
+      completedEntries.push(["平台", `${platform} - ${p?.label}`]);
+    }
+    if (s === "sign_api") completedEntries.push(["签名API", signApiUrl || "(无)"]);
+    if (s === "password") completedEntries.push(["密码", "●".repeat(password.length || 1)]);
+  }
+
+  return (
+    <Box flexDirection="column" paddingX={1}>
+      <Text bold color="cyan">━━ 登录配置 ━━</Text>
+      {savedAccount && (
+        <Text dimColor>已加载已保存配置，直接回车可使用默认值</Text>
+      )}
+      <Box marginTop={1} flexDirection="column">
+        {completedEntries.map(([label, value]) => (
+          <Text key={label}>
+            <Text color="green">✔ </Text>
+            <Text>{label}: </Text>
+            <Text color="white">{value}</Text>
+          </Text>
+        ))}
+      </Box>
+
+      {currentStep === "qq" && (
+        <Box marginTop={1} flexDirection="column">
+          <Text>QQ号 <Text dimColor>(留空则扫码登录)</Text>:</Text>
+          <Box>
+            <Text color="green">❯ </Text>
+            <Text>{inputValue}<Text color="cyan">█</Text></Text>
+          </Box>
+        </Box>
+      )}
+
+      {currentStep === "platform" && (
+        <Box marginTop={1} flexDirection="column">
+          <Text>选择登录平台 <Text dimColor>(输入数字)</Text>:</Text>
+          {PLATFORMS.map((p) => (
+            <Text key={p.value}>
+              <Text color={p.value === platform ? "cyan" : undefined}>
+                {p.value === platform ? "❯ " : "  "}
+                {p.value}. {p.label}
+              </Text>
+            </Text>
+          ))}
+        </Box>
+      )}
+
+      {currentStep === "sign_api" && (
+        <Box marginTop={1} flexDirection="column">
+          <Text>签名API地址 <Text dimColor>(可留空跳过)</Text>:</Text>
+          <Box>
+            <Text color="green">❯ </Text>
+            <Text>{inputValue}<Text color="cyan">█</Text></Text>
+          </Box>
+        </Box>
+      )}
+
+      {currentStep === "password" && (
+        <Box marginTop={1} flexDirection="column">
+          <Text>请输入密码:</Text>
+          <Box>
+            <Text color="green">❯ </Text>
+            <Text>{"●".repeat(inputValue.length)}<Text color="cyan">█</Text></Text>
+          </Box>
+        </Box>
+      )}
+
+      {currentStep === "confirm" && (
+        <Box marginTop={1} flexDirection="column">
+          <Text bold color="yellow">
+            按回车开始登录…
+          </Text>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+/* ── Main Login component ───────────────────────────────── */
 
 export default function Login({ options: opts }: Props) {
   const { exit } = useApp();
-  const [status, setStatus] = useState<Status>("login");
+  const [status, setStatus] = useState<Status>("wizard");
   const [error, setError] = useState("");
   const [client, setClient] = useState<any>(null);
   const [dataDir, setDataDir] = useState("");
-  const [mergedOpts, setMergedOpts] = useState<{
-    q?: number; pwd?: string; plm: number; sau?: string; ver?: string;
-  }>({ plm: opts.plm ?? 1 });
+  const [savedAccount, setSavedAccount] = useState<AccountConfig | undefined>();
+  const [resolvedQQ, setResolvedQQ] = useState<number | undefined>(opts.q);
+  const [finalOpts, setFinalOpts] = useState<{
+    qq?: number; password?: string; platform: number; signApiUrl: string;
+  }>({ platform: 1, signApiUrl: "" });
 
+  // Load config on mount & check if already running
   useEffect(() => {
     void (async () => {
-      // --reconnect: read saved config for defaultUin
-      if (opts.reconnect) {
-        try {
-          const config = await loadConfig();
-          const uin = config.defaultUin;
-          if (!uin) throw new Error("无已保存的账号，请先完整登录一次");
-          const account = getAccountConfig(config, uin);
-          if (!account) throw new Error(`未找到账号 ${uin} 的配置`);
+      try {
+        // Resolve target uin: explicit -q or fallback to defaultUin
+        const config = await loadConfig();
+        const targetUin = opts.q ?? config.defaultUin;
 
-          // If daemon is already running, just report
-          if (await isDaemonRunning(uin)) {
-            setStatus("done");
-            return;
-          }
-
-          // Try to spawn daemon directly with cached token
-          setStatus("starting-daemon");
-          await spawnDaemon(uin);
-          setStatus("done");
-        } catch (e) {
-          setError(e instanceof Error ? e.message : String(e));
-          setStatus("error");
-        }
-        return;
-      }
-
-      // Merge options: config file < CLI flags
-      let qq = opts.q;
-      let pwd = opts.pwd;
-      let plm = opts.plm;
-      let sau = opts.sau;
-      let ver = opts.ver;
-
-      if (opts.config) {
-        try {
-          const raw = await fs.readFile(path.resolve(opts.config), "utf-8");
-          const cfg = JSON.parse(raw) as Record<string, unknown>;
-          qq = qq ?? (cfg.qq as number | undefined) ?? (cfg.uin as number | undefined);
-          pwd = pwd ?? (cfg.password as string | undefined) ?? (cfg.pwd as string | undefined);
-          plm = plm ?? (cfg.platform as number | undefined) ?? (cfg.plm as number | undefined);
-          sau = sau ?? (cfg.sign_api_url as string | undefined) ?? (cfg.sau as string | undefined) ?? (cfg.sign_api_addr as string | undefined);
-          ver = ver ?? (cfg.ver as string | undefined);
-        } catch (e) {
-          setError(`读取配置文件失败: ${e instanceof Error ? e.message : String(e)}`);
+        // Check if daemon already running
+        if (targetUin && await isDaemonRunning(targetUin)) {
+          setError(`账号 ${targetUin} 的守护进程已在运行中`);
           setStatus("error");
           return;
         }
+
+        let account: AccountConfig | undefined;
+        if (opts.c) {
+          // External config file
+          const raw = await fs.readFile(path.resolve(opts.c), "utf-8");
+          const cfg = JSON.parse(raw) as Record<string, unknown>;
+          account = {
+            platform: (cfg.platform as number) ?? (cfg.plm as number) ?? 1,
+            signApiUrl: (cfg.sign_api_url as string) ?? (cfg.sign_api_addr as string) ?? (cfg.sau as string) ?? "",
+            ver: cfg.ver as string | undefined,
+          };
+        } else if (targetUin) {
+          if (!opts.q) setResolvedQQ(targetUin);
+          account = getAccountConfig(config, targetUin);
+        }
+        if (account) setSavedAccount(account);
+
+        // Quick reconnect: skip wizard, directly spawn daemon with cached token
+        if (opts.r) {
+          if (!targetUin) {
+            setError("快速重连需要指定 QQ 号 (-q) 或已设置 defaultUin");
+            setStatus("error");
+            return;
+          }
+          // Already checked not running above
+          if (!getAccountConfig(config, targetUin)) {
+            setError(`账号 ${targetUin} 无已保存的配置，请先完整登录一次`);
+            setStatus("error");
+            return;
+          }
+          setStatus("starting-daemon");
+          await spawnDaemon(targetUin);
+          setStatus("done");
+          return;
+        }
+      } catch {
+        // Config doesn't exist or is invalid — will ask everything
       }
-
-      setMergedOpts({ q: qq, pwd, plm: plm ?? 1, sau, ver });
-
-      const dir = qq ? getAccountDir(qq) : getTmpDir();
-      const c = createClient({
-        platform: (plm ?? 1) as Platform,
-        sign_api_addr: sau || undefined,
-        ver: ver || undefined,
-        data_dir: dir,
-        log_level: "warn",
-      });
-      setClient(c);
-      setDataDir(dir);
-      await fs.mkdir(dir, { recursive: true });
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [opts.c, opts.q, opts.r]);
 
   useEffect(() => {
     if (status === "done" || status === "error") {
-      const timer = setTimeout(() => exit(), 300);
+      const timer = setTimeout(() => exit(), status === "error" ? 2000 : 300);
       return () => clearTimeout(timer);
     }
   }, [status, exit]);
+
+  const handleWizardComplete = async (result: {
+    qq?: number;
+    platform: number;
+    signApiUrl: string;
+    password?: string;
+  }) => {
+    const merged = { ...result };
+    setFinalOpts(merged);
+
+    // Check if this uin's daemon is already running
+    if (merged.qq && await isDaemonRunning(merged.qq)) {
+      setError(`账号 ${merged.qq} 的守护进程已在运行中`);
+      setStatus("error");
+      return;
+    }
+
+    setStatus("login");
+
+    const dir = merged.qq ? getAccountDir(merged.qq) : getTmpDir();
+    await fs.mkdir(dir, { recursive: true });
+    const c = createClient({
+      platform: merged.platform as Platform,
+      sign_api_addr: merged.signApiUrl || undefined,
+      ver: savedAccount?.ver || undefined,
+      data_dir: dir,
+      log_level: "warn",
+    });
+    setClient(c);
+    setDataDir(dir);
+  };
 
   const handleLoginComplete = async () => {
     if (!client) return;
@@ -186,7 +368,7 @@ export default function Login({ options: opts }: Props) {
 
     try {
       // If no uin was given, move data from tmp dir to account dir
-      if (!mergedOpts.q) {
+      if (!finalOpts.qq) {
         const tmpDir = getTmpDir();
         const accountDir = getAccountDir(actualUin);
         await fs.mkdir(accountDir, { recursive: true });
@@ -203,9 +385,9 @@ export default function Login({ options: opts }: Props) {
       // Save config
       const config = await loadConfig();
       setAccountConfig(config, actualUin, {
-        platform: mergedOpts.plm,
-        signApiUrl: mergedOpts.sau ?? "",
-        ver: mergedOpts.ver,
+        platform: finalOpts.platform,
+        signApiUrl: finalOpts.signApiUrl ?? "",
+        ver: savedAccount?.ver,
       });
       config.defaultUin = actualUin;
       await saveConfig(config);
@@ -248,16 +430,25 @@ export default function Login({ options: opts }: Props) {
     }
   };
 
-  if (!client) return <Spinner label="初始化…" />;
-
   return (
     <Box flexDirection="column">
-      {status === "login" && (
+      {status === "wizard" && (
+        <WizardPrompt
+          onComplete={(r) => void handleWizardComplete(r)}
+          initialQQ={resolvedQQ}
+          needPassword={opts.p}
+          savedAccount={savedAccount}
+        />
+      )}
+
+      {status === "login" && !client && <Spinner label="初始化…" />}
+
+      {status === "login" && client && (
         <LoginFlow
           client={client}
           dataDir={dataDir}
-          uin={mergedOpts.q}
-          password={mergedOpts.pwd}
+          uin={finalOpts.qq}
+          password={finalOpts.password}
           onComplete={() => void handleLoginComplete()}
           onError={handleLoginError}
         />

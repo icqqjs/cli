@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Text, Box, useInput } from "ink";
 import { Spinner } from "./Spinner.js";
-import { loadConfig } from "@/lib/config.js";
-import { IpcClient } from "@/lib/ipc-client.js";
-import { isDaemonRunning } from "@/daemon/lifecycle.js";
+import { useIpcConnection } from "@/lib/use-ipc-connection.js";
+import type { IpcClient } from "@/lib/ipc-client.js";
 import { Actions } from "@/daemon/protocol.js";
 
 type MemberItem = {
@@ -17,6 +16,8 @@ type Props = {
   gid: number;
   onSelect: (uid: number) => void;
 };
+
+const PAGE = 15;
 
 function MemberList({ ipc, gid, onSelect }: { ipc: IpcClient; gid: number; onSelect: (uid: number) => void }) {
   const [members, setMembers] = useState<MemberItem[]>([]);
@@ -44,6 +45,9 @@ function MemberList({ ipc, gid, onSelect }: { ipc: IpcClient; gid: number; onSel
           String(m.user_id).includes(filter),
       )
     : members;
+
+  const scrollTop = Math.max(0, Math.min(index - PAGE + 1, filtered.length - PAGE));
+  const visible = filtered.slice(scrollTop, scrollTop + PAGE);
 
   useInput((char, key) => {
     if (key.return) {
@@ -80,41 +84,29 @@ function MemberList({ ipc, gid, onSelect }: { ipc: IpcClient; gid: number; onSel
       <Text bold color="cyan">选择成员 <Text dimColor>(↑↓ 选择 | 输入过滤 | Enter 确认)</Text></Text>
       <Text>搜索: {filter}<Text color="cyan">█</Text></Text>
       <Box flexDirection="column" marginTop={1}>
-        {filtered.slice(0, 15).map((m, i) => (
-          <Text key={m.user_id}>
-            {i === index ? <Text color="yellow">❯ </Text> : <Text>  </Text>}
-            <Text bold>{m.card || m.nickname}</Text>
-            {m.card && <Text dimColor> ({m.nickname})</Text>}
-            <Text dimColor> · {m.user_id}</Text>
-            {m.role !== "member" && <Text color={m.role === "owner" ? "red" : "yellow"}> [{m.role === "owner" ? "群主" : "管理"}]</Text>}
-          </Text>
-        ))}
+        {visible.map((m) => {
+          const i = filtered.indexOf(m);
+          return (
+            <Text key={m.user_id}>
+              {i === index ? <Text color="yellow">❯ </Text> : <Text>  </Text>}
+              <Text bold>{m.card || m.nickname}</Text>
+              {m.card && <Text dimColor> ({m.nickname})</Text>}
+              <Text dimColor> · {m.user_id}</Text>
+              {m.role !== "member" && <Text color={m.role === "owner" ? "red" : "yellow"}> [{m.role === "owner" ? "群主" : "管理"}]</Text>}
+            </Text>
+          );
+        })}
         {filtered.length === 0 && <Text dimColor>无匹配成员</Text>}
-        {filtered.length > 15 && <Text dimColor>… 还有 {filtered.length - 15} 人</Text>}
+        {filtered.length > PAGE && (
+          <Text dimColor>{index + 1}/{filtered.length}</Text>
+        )}
       </Box>
     </Box>
   );
 }
 
 export function MemberSelector({ gid, onSelect }: Props) {
-  const [ipc, setIpc] = useState<IpcClient | null>(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const config = await loadConfig();
-        const uin = config.defaultUin;
-        if (!uin) throw new Error("未找到已登录账号，请先执行 icqq login");
-        if (!(await isDaemonRunning(uin)))
-          throw new Error("守护进程未运行，请先执行 icqq login");
-        const client = await IpcClient.connect(uin);
-        setIpc(client);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-      }
-    })();
-  }, []);
+  const { ipc, error } = useIpcConnection();
 
   if (error) return <Text color="red">✖ {error}</Text>;
   if (!ipc) return <Spinner label="连接守护进程…" />;

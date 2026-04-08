@@ -470,11 +470,24 @@ export function ChatSession({ ipc, type, id }: Props) {
   };
 
   // ── Render ──
+  const isFirstRender = messages.length === 0 && mode === "chat";
+
   return (
     <Box flexDirection="column">
       <Text bold color="yellow">
         ━━ {type === "group" ? "群聊" : "私聊"} ({id}) ━━
       </Text>
+
+      {isFirstRender && (
+        <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1}>
+          <Text dimColor>快捷键:</Text>
+          {type === "group" && <Text dimColor>  Ctrl+G  @成员提及</Text>}
+          <Text dimColor>  Ctrl+Y  表情选择器</Text>
+          <Text dimColor>  Ctrl+O  发送文件</Text>
+          <Text dimColor>  Ctrl+C  退出聊天</Text>
+        </Box>
+      )}
+
       <Box flexDirection="column" marginTop={1}>
         {messages.map((msg, i) => (
           <Text key={i}>

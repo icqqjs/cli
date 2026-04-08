@@ -320,7 +320,19 @@ const handlers: Record<string, Handler> = {
   // ── 系统消息/请求 ──
   [Actions.GET_SYSTEM_MSG]: async (client) => {
     const msgs = await client.getSystemMsg();
-    const all = (msgs as any[]).map((m: any) => ({
+    // getSystemMsg() may return an array or { friend: [], group: [] }
+    let raw: any[];
+    if (Array.isArray(msgs)) {
+      raw = msgs;
+    } else if (msgs && typeof msgs === "object") {
+      const obj = msgs as Record<string, unknown>;
+      const friend = Array.isArray(obj.friend) ? obj.friend : [];
+      const group = Array.isArray(obj.group) ? obj.group : [];
+      raw = [...friend, ...group];
+    } else {
+      raw = [];
+    }
+    const all = raw.map((m: any) => ({
       type: m.request_type ?? m.sub_type ?? "unknown",
       user_id: m.user_id,
       nickname: m.nickname,
@@ -464,10 +476,16 @@ export async function handleRequest(
     const data = await handler(client, req.params);
     return { id: req.id, ok: true, data };
   } catch (err) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === "string"
+          ? err
+          : JSON.stringify(err) ?? String(err);
     return {
       id: req.id,
       ok: false,
-      error: err instanceof Error ? err.message : String(err),
+      error: message,
     };
   }
 }
