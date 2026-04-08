@@ -35,12 +35,11 @@ jobs:
       - name: Install and build
         run: pnpm install --frozen-lockfile && pnpm build
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{secrets.INSTALL_TOKEN}}
         if: ${{ steps.release.outputs.release_created }}
 
       - name: Publish to GitHub Packages
         run: pnpm publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ steps.release.outputs.release_created }}
