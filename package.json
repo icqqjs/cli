@@ -1,0 +1,39 @@
+{
+  "name": "@icqqjs/cli",
+  "version": "1.0.0",
+  "description": "基于 icqq 的命令行 QQ 客户端",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "icqq": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "qq",
+    "icqq",
+    "cli"
+  ],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.7.0",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.0.0",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "@icqqjs/icqq": "^1.10.18",
+    "ink": "^6.0.0",
+    "pastel": "^4.0.0",
+    "react": "^19.0.0",
+    "zod": "^4.3.6"
+  }
+}
