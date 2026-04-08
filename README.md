@@ -84,6 +84,8 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq send private <qq> <message>` | 发送私聊消息 |
 | `icqq send group <gid> <message>` | 发送群消息 |
 | `icqq send temp <qq> <message> -g <gid>` | 发送临时消息 |
+| `icqq friend send <qq> <message>` | 发送私聊消息（兼容旧格式） |
+| `icqq group send <gid> <message>` | 发送群消息（兼容旧格式） |
 | `icqq friend chat <qq>` | 进入好友交互聊天 |
 | `icqq group chat <gid>` | 进入群交互聊天 |
 | `icqq friend chat history <qq>` | 查看好友聊天记录 |
