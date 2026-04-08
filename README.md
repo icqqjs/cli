@@ -106,7 +106,6 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 |------|------|
 | `icqq friend list` | 好友列表 |
 | `icqq friend view <qq>` | 查看好友资料 |
-| `icqq friend send <qq> <message>` | 发送私聊消息 |
 | `icqq friend delete <qq>` | 删除好友 |
 | `icqq friend like <qq>` | 点赞 |
 | `icqq friend poke <qq>` | 戳一戳 |
@@ -118,7 +117,6 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 |------|------|
 | `icqq group list` | 群列表 |
 | `icqq group view <gid>` | 查看群信息 |
-| `icqq group send <gid> <message>` | 发送群消息 |
 | `icqq group member list <gid>` | 群成员列表 |
 | `icqq group member view <gid> <qq>` | 查看群成员资料 |
 | `icqq group invite <gid> <qq>` | 邀请入群 |
