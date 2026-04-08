@@ -518,6 +518,43 @@ const handlers: Record<string, Handler> = {
     const name = (params.name as string) ?? undefined;
     return await client.pickGroup(g).sendFile(filePath, pid, name);
   },
+
+  [Actions.FRIEND_RECALL_FILE]: async (client, params) => {
+    const fid = params.fid as string;
+    return await client.pickFriend(uid(params)).recallFile(fid);
+  },
+
+  [Actions.GFS_UPLOAD]: async (client, params) => {
+    const filePath = params.file as string;
+    const g = gid(params);
+    const pid = (params.pid as string) ?? "/";
+    const name = (params.name as string) ?? undefined;
+    const gfs = client.acquireGfs(g);
+    return await gfs.upload(filePath, pid, name);
+  },
+
+  [Actions.GROUP_SET_REACTION]: async (client, params) => {
+    const seq = Number(params.seq);
+    const id = String(params.id);
+    return await client.pickGroup(gid(params)).setReaction(seq, id);
+  },
+
+  [Actions.GROUP_DEL_REACTION]: async (client, params) => {
+    const seq = Number(params.seq);
+    const id = String(params.id);
+    return await client.pickGroup(gid(params)).delReaction(seq, id);
+  },
+
+  [Actions.GET_FORWARD_MSG]: async (client, params) => {
+    const resid = params.resid as string;
+    return await client.getForwardMsg(resid);
+  },
+
+  [Actions.MAKE_FORWARD_MSG]: async (client, params) => {
+    const msgs = params.messages as any[];
+    const dm = params.dm === true;
+    return await client.makeForwardMsg(msgs, dm);
+  },
 };
 
 export async function handleRequest(

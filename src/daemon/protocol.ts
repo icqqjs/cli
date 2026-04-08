@@ -135,6 +135,20 @@ export const Actions = {
   GET_ROAMING_STAMP: "get_roaming_stamp",
   DELETE_STAMP: "delete_stamp",
 
+  // 好友文件操作
+  FRIEND_RECALL_FILE: "friend_recall_file",
+
+  // 群文件上传
+  GFS_UPLOAD: "gfs_upload",
+
+  // 群消息表态
+  GROUP_SET_REACTION: "group_set_reaction",
+  GROUP_DEL_REACTION: "group_del_reaction",
+
+  // 转发消息
+  GET_FORWARD_MSG: "get_forward_msg",
+  MAKE_FORWARD_MSG: "make_forward_msg",
+
   // 订阅
   SUBSCRIBE: "subscribe",
   UNSUBSCRIBE: "unsubscribe",
