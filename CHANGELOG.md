@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/icqqjs/cli/compare/v1.0.0...v1.0.1) (2026-04-08)
+
+
+### Bug Fixes
+
+* 修复发布工作流中的 GITHUB_TOKEN 环境变量配置 ([2b036d8](https://github.com/icqqjs/cli/commit/2b036d8eeb8cc02d5255ec8e397fe12f9106085b))
+* 更新发布工作流中的认证令牌配置 ([bce3bbf](https://github.com/icqqjs/cli/commit/bce3bbfd22bec3f232cf414350335297a1724a7c))
+
 ## 1.0.0 (2026-04-08)
 
 
