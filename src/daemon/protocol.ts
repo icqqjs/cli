@@ -111,11 +111,29 @@ export const Actions = {
   GFS_DELETE: "gfs_delete",
   GFS_RENAME: "gfs_rename",
   GFS_STAT: "gfs_stat",
+  GFS_MOVE: "gfs_move",
+  GFS_DOWNLOAD: "gfs_download",
 
   // 其他功能
   IMAGE_OCR: "image_ocr",
   RELOAD_FRIEND_LIST: "reload_friend_list",
   RELOAD_GROUP_LIST: "reload_group_list",
+  CLEAN_CACHE: "clean_cache",
+  GET_GROUP_SHARE: "get_group_share",
+
+  // 群管理扩展
+  GROUP_SET_JOIN_TYPE: "group_set_join_type",
+  GROUP_SET_RATE_LIMIT: "group_set_rate_limit",
+  GROUP_MUTE_ANONY: "group_mute_anony",
+  GROUP_ANON_INFO: "group_anon_info",
+
+  // 好友操作扩展
+  ADD_FRIEND: "add_friend",
+  SEND_TEMP_MSG: "send_temp_msg",
+
+  // 漫游表情
+  GET_ROAMING_STAMP: "get_roaming_stamp",
+  DELETE_STAMP: "delete_stamp",
 
   // 订阅
   SUBSCRIBE: "subscribe",

@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/cli.js",
-    "clean": "rm -rf dist",
+    "clean": "node --eval \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

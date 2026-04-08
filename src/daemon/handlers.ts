@@ -419,6 +419,20 @@ const handlers: Record<string, Handler> = {
     return await gfs.stat(fid);
   },
 
+  [Actions.GFS_MOVE]: async (client, params) => {
+    const fid = params.fid as string;
+    const pid = params.pid as string;
+    const gfs = client.acquireGfs(gid(params));
+    await gfs.mv(fid, pid);
+    return { ok: true };
+  },
+
+  [Actions.GFS_DOWNLOAD]: async (client, params) => {
+    const fid = params.fid as string;
+    const gfs = client.acquireGfs(gid(params));
+    return await gfs.download(fid);
+  },
+
   // ── 其他 ──
   [Actions.IMAGE_OCR]: async (client, params) => {
     const filePath = params.file as string;
@@ -434,6 +448,60 @@ const handlers: Record<string, Handler> = {
   [Actions.RELOAD_GROUP_LIST]: async (client) => {
     await client.reloadGroupList();
     return { ok: true, groupCount: client.gl.size };
+  },
+
+  [Actions.CLEAN_CACHE]: async (client) => {
+    client.cleanCache();
+    return { ok: true };
+  },
+
+  [Actions.GET_GROUP_SHARE]: async (client, params) => {
+    return await client.getGroupShareJson(gid(params));
+  },
+
+  [Actions.GROUP_SET_JOIN_TYPE]: async (client, params) => {
+    const type = String(params.type);
+    const question = (params.question as string) ?? undefined;
+    const answer = (params.answer as string) ?? undefined;
+    return await client.pickGroup(gid(params)).setGroupJoinType(type, question, answer);
+  },
+
+  [Actions.GROUP_SET_RATE_LIMIT]: async (client, params) => {
+    const times = Number(params.times);
+    return await client.pickGroup(gid(params)).setMessageRateLimit(times);
+  },
+
+  [Actions.GROUP_MUTE_ANONY]: async (client, params) => {
+    const flag = params.flag as string;
+    const duration = params.duration ? Number(params.duration) : undefined;
+    await client.pickGroup(gid(params)).muteAnony(flag, duration);
+    return { ok: true };
+  },
+
+  [Actions.GROUP_ANON_INFO]: async (client, params) => {
+    return await client.pickGroup(gid(params)).getAnonyInfo();
+  },
+
+  [Actions.ADD_FRIEND]: async (client, params) => {
+    const g = gid(params);
+    const u = uid(params);
+    const comment = (params.comment as string) ?? "";
+    return await client.addFriend(g, u, comment);
+  },
+
+  [Actions.SEND_TEMP_MSG]: async (client, params) => {
+    const message = parseMessage(params.message as string);
+    return await client.sendTempMsg(gid(params), uid(params), message);
+  },
+
+  [Actions.GET_ROAMING_STAMP]: async (client) => {
+    return await client.getRoamingStamp();
+  },
+
+  [Actions.DELETE_STAMP]: async (client, params) => {
+    const id = params.id as string | string[];
+    await client.deleteStamp(id);
+    return { ok: true };
   },
 
   // ── 文件传输 ──
