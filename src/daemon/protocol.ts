@@ -46,8 +46,6 @@ export const Actions = {
   GET_MSG: "get_msg",
   HISTORY_PRIVATE: "history_private",
   HISTORY_GROUP: "history_group",
-  GET_PRIVATE_MSG_HISTORY: "history_private",
-  GET_GROUP_MSG_HISTORY: "history_group",
   MARK_READ: "mark_read",
   DELETE_MSG: "delete_msg",
 
@@ -70,7 +68,6 @@ export const Actions = {
 
   // 群管理
   GROUP_MUTE: "group_mute",
-  GROUP_MUTE_MEMBER: "group_mute",
   GROUP_MUTE_ALL: "group_mute_all",
   GROUP_KICK: "group_kick",
   GROUP_QUIT: "group_quit",
@@ -80,8 +77,6 @@ export const Actions = {
   GROUP_SIGN: "group_sign",
   GROUP_ESSENCE_ADD: "group_essence_add",
   GROUP_ESSENCE_REMOVE: "group_essence_remove",
-  GROUP_SET_ESSENCE: "group_essence_add",
-  GROUP_REMOVE_ESSENCE: "group_essence_remove",
   GROUP_ALLOW_ANONY: "group_allow_anony",
   GROUP_MUTED_LIST: "group_muted_list",
   GROUP_AT_ALL_REMAIN: "group_at_all_remain",
@@ -91,7 +86,6 @@ export const Actions = {
   FRIEND_LIKE: "friend_like",
   FRIEND_DELETE: "friend_delete",
   FRIEND_REMARK: "friend_remark",
-  FRIEND_SET_REMARK: "friend_remark",
   FRIEND_CLASS: "friend_class",
 
   // 系统消息/请求
