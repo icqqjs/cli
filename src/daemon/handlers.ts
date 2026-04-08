@@ -698,6 +698,23 @@ const handlers: Record<string, Handler> = {
     return { uid: await client.uin2uid(uin, groupId) };
   },
 
+  // ── 获取图片/语音 URL ──
+  [Actions.GET_PIC_URL]: async (client, params) => {
+    const elem = params.elem as Record<string, unknown>;
+    const contact = params.group_id
+      ? client.pickGroup(gid(params))
+      : client.pickFriend(uid(params));
+    return { url: await contact.getPicUrl(elem as any) };
+  },
+
+  [Actions.GET_PTT_URL]: async (client, params) => {
+    const elem = params.elem as Record<string, unknown>;
+    const contact = params.group_id
+      ? client.pickGroup(gid(params))
+      : client.pickFriend(uid(params));
+    return { url: await contact.getPttUrl(elem as any) };
+  },
+
   // ── 视频/加好友设置 ──
   [Actions.GET_VIDEO_URL]: async (client, params) => {
     const fid = params.fid as string;

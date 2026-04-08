@@ -186,6 +186,10 @@ export const Actions = {
   GET_FORUM_URL: "get_forum_url",
   GUILD_CHANNEL_SHARE: "guild_channel_share",
 
+  // 获取图片/语音 URL (Contactable)
+  GET_PIC_URL: "get_pic_url",
+  GET_PTT_URL: "get_ptt_url",
+
   // 订阅
   SUBSCRIBE: "subscribe",
   UNSUBSCRIBE: "unsubscribe",
