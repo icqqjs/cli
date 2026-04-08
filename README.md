@@ -4,10 +4,33 @@
 
 ## 安装
 
-```bash
-# 需要先配置 GitHub Packages 的 npm registry
-npm config set @icqqjs:registry https://npm.pkg.github.com
+### 1. 配置鉴权
 
+由于包托管在 GitHub Packages，安装前需要先完成鉴权。
+
+在你的项目根目录新建 `.npmrc`，写入：
+
+```
+@icqqjs:registry=https://npm.pkg.github.com
+```
+
+然后在命令行登录：
+
+```bash
+npm login --scope=@icqqjs --auth-type=legacy --registry=https://npm.pkg.github.com
+```
+
+根据提示输入：
+
+| 字段 | 说明 |
+|------|------|
+| Username | 你的 GitHub 账号 |
+| Password | 前往 https://github.com/settings/tokens/new 创建，Scopes 勾选 `read:packages` |
+| Email | 你的公开邮箱地址 |
+
+### 2. 安装
+
+```bash
 npm install -g @icqqjs/cli
 ```
 
