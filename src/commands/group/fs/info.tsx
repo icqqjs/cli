@@ -20,7 +20,7 @@ export default function GfsInfo({ args: [gid] }: Props) {
 
   return (
     <IpcCommand
-      action={Actions.GFS_STAT}
+      action={Actions.GFS_INFO}
       params={{ group_id: selectedGid }}
       loadingText="获取文件系统信息…"
       render={(data: any) => (
@@ -28,8 +28,9 @@ export default function GfsInfo({ args: [gid] }: Props) {
           <Text bold color="cyan">群文件系统信息</Text>
           <Text>文件数: {data.file_count}</Text>
           <Text>最大文件数: {data.max_file_count}</Text>
-          <Text>已用空间: {(data.used_space / 1024 / 1024).toFixed(1)} MB</Text>
-          <Text>总空间: {(data.total_space / 1024 / 1024).toFixed(1)} MB</Text>
+          <Text>已用空间: {(data.used / 1024 / 1024).toFixed(1)} MB</Text>
+          <Text>总空间: {(data.total / 1024 / 1024).toFixed(1)} MB</Text>
+          <Text>剩余空间: {(data.free / 1024 / 1024).toFixed(1)} MB</Text>
         </Box>
       )}
     />
