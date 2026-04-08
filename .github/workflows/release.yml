@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: "@icqqjs"
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          title: "chore: version packages"
+          commit: "chore: version packages"
+          version: pnpm version
+          publish: pnpm release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const publishedPackages = ${{ steps.changesets.outputs.publishedPackages }};
+            for (const pkg of publishedPackages) {
+              const tag = `v${pkg.version}`;
+              await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: tag,
+                name: tag,
+                body: `Release ${pkg.name}@${pkg.version}\n\nSee [CHANGELOG.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/master/CHANGELOG.md) for details.`,
+                generate_release_notes: true,
+              });
+            }
