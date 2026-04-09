@@ -34,3 +34,16 @@ export async function resolveIcqq(): Promise<typeof import("@icqqjs/icqq")> {
 export function isIcqqAvailable(): Promise<boolean> {
   return resolveIcqq().then(() => true, () => false);
 }
+
+/** Return the directory where @icqqjs/icqq is installed, or null. */
+export async function getIcqqPath(): Promise<string | null> {
+  try {
+    const { createRequire } = await import("node:module");
+    const require = createRequire(import.meta.url);
+    const pkgPath = require.resolve("@icqqjs/icqq/package.json");
+    const { dirname } = await import("node:path");
+    return dirname(pkgPath);
+  } catch {
+    return null;
+  }
+}
