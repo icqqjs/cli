@@ -16,13 +16,11 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
-          registry-url: https://npm.pkg.github.com
-          scope: "@icqqjs"
 
       - run: pnpm install --frozen-lockfile
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.INSTALL_TOKEN}}
 
       - run: pnpm build
+
+      - run: pnpm test

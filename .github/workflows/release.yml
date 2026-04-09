@@ -7,39 +7,38 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  packages: write
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
           release-type: node
 
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
       - uses: actions/checkout@v5
-        if: ${{ steps.release.outputs.release_created }}
 
       - uses: pnpm/action-setup@v5
-        if: ${{ steps.release.outputs.release_created }}
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
-          registry-url: https://npm.pkg.github.com
-          scope: "@icqqjs"
-        if: ${{ steps.release.outputs.release_created }}
+          registry-url: https://registry.npmjs.org
 
       - name: Install and build
         run: pnpm install --frozen-lockfile && pnpm build
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.INSTALL_TOKEN}}
-        if: ${{ steps.release.outputs.release_created }}
 
-      - name: Publish to GitHub Packages
-        run: pnpm publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: ${{ steps.release.outputs.release_created }}
+      - name: Publish to npm
+        run: pnpm publish --no-git-checks --access public

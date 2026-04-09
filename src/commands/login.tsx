@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Text, Box, useApp, useInput } from "ink";
 import zod from "zod";
 import { option } from "pastel";
-import { createClient, type Platform } from "@icqqjs/icqq";
+import type { Platform } from "@icqqjs/icqq";
 import { LoginFlow } from "@/components/LoginFlow.js";
 import { Spinner } from "@/components/Spinner.js";
+import { resolveIcqq } from "@/lib/icqq-resolve.js";
 import {
   loadConfig,
   saveConfig,
@@ -351,6 +352,7 @@ export default function Login({ options: opts }: Props) {
 
     const dir = merged.qq ? getAccountDir(merged.qq) : getTmpDir();
     await fs.mkdir(dir, { recursive: true });
+    const { createClient } = await resolveIcqq();
     const c = createClient({
       platform: merged.platform as Platform,
       sign_api_addr: merged.signApiUrl || undefined,

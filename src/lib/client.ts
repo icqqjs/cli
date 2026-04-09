@@ -1,12 +1,14 @@
-import { createClient as icqqCreateClient, type Client, type Platform } from "@icqqjs/icqq";
+import type { Client, Platform } from "@icqqjs/icqq";
 import { getAccountDir } from "./paths.js";
 import type { AccountConfig } from "./config.js";
+import { resolveIcqq } from "./icqq-resolve.js";
 
-export function createIcqqClient(
+export async function createIcqqClient(
   uin: number,
   account: AccountConfig,
-): Client {
-  return icqqCreateClient({
+): Promise<Client> {
+  const { createClient } = await resolveIcqq();
+  return createClient({
     platform: account.platform as Platform,
     sign_api_addr: account.signApiUrl || undefined,
     ver: account.ver || undefined,

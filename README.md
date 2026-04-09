@@ -4,35 +4,41 @@
 
 ## 安装
 
-### 1. 配置鉴权
-
-由于包托管在 GitHub Packages，安装前需要先完成鉴权。
-
-在你的项目根目录新建 `.npmrc`，写入：
-
-```
-@icqqjs:registry=https://npm.pkg.github.com
+```bash
+npm install -g @icqqjs/cli
 ```
 
-然后在命令行登录：
+### 安装 icqq 核心依赖
+
+CLI 的核心协议库 `@icqqjs/icqq` 托管在 GitHub Packages，首次使用需要额外安装：
+
+```bash
+# 一键安装（自动配置 .npmrc + 安装 icqq）
+icqq setup
+```
+
+<details>
+<summary>手动安装</summary>
+
+1. 配置 npm scope：
+
+```bash
+echo '@icqqjs:registry=https://npm.pkg.github.com' >> ~/.npmrc
+```
+
+2. 登录 GitHub Packages（需要具有 `read:packages` 权限的 [Personal Access Token](https://github.com/settings/tokens/new)）：
 
 ```bash
 npm login --scope=@icqqjs --auth-type=legacy --registry=https://npm.pkg.github.com
 ```
 
-根据提示输入：
-
-| 字段 | 说明 |
-|------|------|
-| Username | 你的 GitHub 账号 |
-| Password | 前往 https://github.com/settings/tokens/new 创建，Scopes 勾选 `read:packages` |
-| Email | 你的公开邮箱地址 |
-
-### 2. 安装
+3. 安装：
 
 ```bash
-npm install -g @icqqjs/cli
+npm install -g @icqqjs/icqq
 ```
+
+</details>
 
 ## 快速开始
 

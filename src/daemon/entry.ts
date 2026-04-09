@@ -27,7 +27,7 @@ async function main() {
   const ipcToken = randomBytes(32).toString("hex");
   await fs.writeFile(getTokenPath(uin), ipcToken, { mode: 0o600 });
 
-  const client = createIcqqClient(uin, account);
+  const client = await createIcqqClient(uin, account);
 
   // Login with cached token
   await new Promise<void>((resolve, reject) => {
