@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/icqqjs/cli/compare/v1.2.0...v1.3.0) (2026-04-09)
+
+
+### Features
+
+* 优化表情模式的显示，添加表情搜索和分页功能 ([e83b750](https://github.com/icqqjs/cli/commit/e83b750248877bab72251ab899bf99b0d6bea961))
+
 ## [1.2.0](https://github.com/icqqjs/cli/compare/v1.1.0...v1.2.0) (2026-04-09)
 
 
