@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/icqqjs/cli/compare/v1.3.1...v1.4.0) (2026-04-09)
+
+
+### Features
+
+* 更新 CI/CD 配置，支持 Node.js 24，添加测试步骤；重构依赖管理，支持从 npm 安装；新增子频道相关命令 ([1a0acc0](https://github.com/icqqjs/cli/commit/1a0acc0cc95f81253a4b042d01076e92d9abc50b))
+
 ## [1.3.1](https://github.com/icqqjs/cli/compare/v1.3.0...v1.3.1) (2026-04-09)
 
 
