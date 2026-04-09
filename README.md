@@ -82,16 +82,16 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 
 | 命令 | 说明 |
 |------|------|
-| `icqq send private <qq> <message>` | 发送私聊消息 |
-| `icqq send group <gid> <message>` | 发送群消息 |
-| `icqq send temp <qq> <message> -g <gid>` | 发送临时消息 |
-| `icqq friend send <qq> <message>` | 发送私聊消息（兼容旧格式） |
-| `icqq group send <gid> <message>` | 发送群消息（兼容旧格式） |
+| `icqq friend send <qq> <message>` | 发送私聊消息 |
+| `icqq group send <gid> <message>` | 发送群消息 |
 | `icqq friend chat <qq>` | 进入好友交互聊天 |
 | `icqq group chat <gid>` | 进入群交互聊天 |
 | `icqq friend chat history <qq>` | 查看好友聊天记录 |
 | `icqq group chat history <gid>` | 查看群聊天记录 |
 | `icqq recall <msgid>` | 撤回消息 |
+| `icqq msg get <msgid>` | 查看消息详情 |
+| `icqq msg mark-read <msgid>` | 标记消息已读 |
+| `icqq forward get <msgid>` | 查看合并转发消息 |
 
 消息支持 CQ 码语法：
 
@@ -110,10 +110,26 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 |------|------|
 | `icqq friend list` | 好友列表 |
 | `icqq friend view <qq>` | 查看好友资料 |
+| `icqq friend add <qq>` | 添加好友（可通过群） |
 | `icqq friend delete <qq>` | 删除好友 |
 | `icqq friend like <qq>` | 点赞 |
 | `icqq friend poke <qq>` | 戳一戳 |
 | `icqq friend remark <qq> <name>` | 设置好友备注 |
+| `icqq friend avatar-url <qq>` | 获取好友头像 URL |
+| `icqq friend send-file <qq> <file>` | 发送文件给好友 |
+| `icqq friend file-info <qq> <fid>` | 获取私聊文件信息 |
+| `icqq friend file-url <qq> <fid>` | 获取私聊文件下载链接 |
+| `icqq friend recall-file <qq> <fid>` | 撤回发送给好友的文件 |
+
+### 好友分组
+
+| 命令 | 说明 |
+|------|------|
+| `icqq friend class list` | 查看好友分组 |
+| `icqq friend class add <name>` | 创建好友分组 |
+| `icqq friend class delete <id>` | 删除好友分组 |
+| `icqq friend class rename <id> <name>` | 重命名好友分组 |
+| `icqq friend class set <qq> <id>` | 移动好友到分组 |
 
 ### 群
 
@@ -127,10 +143,19 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq group kick <gid> <qq>` | 踢出群成员 |
 | `icqq group mute <gid> <qq> [duration]` | 禁言 |
 | `icqq group mute-all <gid>` | 全体禁言 |
+| `icqq group mute-anon <gid> <flag>` | 禁言匿名成员 |
+| `icqq group muted-list <gid>` | 查看禁言列表 |
 | `icqq group poke <gid> <qq>` | 戳一戳 |
 | `icqq group quit <gid>` | 退群 |
 | `icqq group sign <gid>` | 群签到 |
 | `icqq group announce <gid> <content>` | 发群公告 |
+| `icqq group avatar-url <gid>` | 获取群头像 URL |
+| `icqq group anon-info <gid>` | 查看群匿名信息 |
+| `icqq group at-all-remain <gid>` | 查看 @全体 剩余次数 |
+| `icqq group share <gid>` | 获取群分享链接 |
+| `icqq group screen-member <gid> <qq>` | 屏蔽/取消屏蔽群成员消息 |
+| `icqq group reaction add <msgid> <emoji>` | 消息表态 |
+| `icqq group reaction remove <msgid> <emoji>` | 取消表态 |
 
 ### 群设置
 
@@ -142,18 +167,27 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq group set title <gid> <qq> <title>` | 设置群头衔 |
 | `icqq group set admin <gid> <qq>` | 设置/取消管理员 |
 | `icqq group set remark <gid> <name>` | 修改群备注 |
+| `icqq group set anonymous <gid>` | 开关匿名 |
+| `icqq group set join-type <gid> <type>` | 设置加群方式 |
+| `icqq group set rate-limit <gid> <limit>` | 设置发言频率限制 |
 
 ### 群精华 / 群文件
 
 | 命令 | 说明 |
 |------|------|
-| `icqq group essence add <gid> <msgid>` | 添加精华消息 |
-| `icqq group essence remove <gid> <msgid>` | 移除精华消息 |
+| `icqq group essence add <msgid>` | 添加精华消息 |
+| `icqq group essence remove <msgid>` | 移除精华消息 |
 | `icqq group fs list <gid>` | 群文件列表 |
-| `icqq group fs info <gid> <fid>` | 文件详情 |
+| `icqq group fs info <gid>` | 查看群文件系统信息 |
+| `icqq group fs stat <gid> <fid>` | 查看文件/目录详情 |
 | `icqq group fs mkdir <gid> <name>` | 创建文件夹 |
 | `icqq group fs delete <gid> <fid>` | 删除文件 |
 | `icqq group fs rename <gid> <fid> <name>` | 重命名文件 |
+| `icqq group fs upload <gid> <file>` | 上传文件 |
+| `icqq group fs download <gid> <fid>` | 获取下载链接 |
+| `icqq group fs move <gid> <fid> <pid>` | 移动文件 |
+| `icqq group fs forward <gid> <fid> <target_gid>` | 转发到其他群 |
+| `icqq group fs forward-offline <gid> <fid>` | 转为离线文件 |
 
 ### 个人设置
 
@@ -181,6 +215,36 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq notify` | 查看通知状态 |
 | `icqq notify on` | 开启系统通知 |
 | `icqq notify off` | 关闭系统通知 |
+| `icqq convert uid <qq>` | QQ 号转 UID |
+| `icqq convert uin <uid>` | UID 转 QQ 号 |
+| `icqq get client-key` | 获取 ClientKey |
+| `icqq get pskey` | 获取 PSKey |
+| `icqq get video-url <vid>` | 获取短视频下载链接 |
+| `icqq stranger view <qq>` | 查看陌生人资料 |
+| `icqq stranger status <qq>` | 查看陌生人在线状态 |
+| `icqq stranger add-setting <qq>` | 查看加好友设置 |
+| `icqq stamp list` | 查看漫游表情列表 |
+| `icqq stamp delete` | 删除漫游表情 |
+| `icqq cache clean` | 清理缓存 |
+| `icqq reload friends` | 重载好友列表 |
+| `icqq reload groups` | 重载群列表 |
+| `icqq reload blacklist` | 重载黑名单 |
+| `icqq reload guilds` | 重载频道列表 |
+| `icqq reload strangers` | 重载陌生人列表 |
+| `icqq completion [shell]` | 生成 Shell 自动补全脚本 |
+
+### 频道（Guild）
+
+| 命令 | 说明 |
+|------|------|
+| `icqq guild list` | 频道列表 |
+| `icqq guild info` | 频道信息 |
+| `icqq guild channels` | 子频道列表 |
+| `icqq guild members` | 频道成员列表 |
+| `icqq guild send` | 发送频道消息 |
+| `icqq guild recall` | 撤回频道消息 |
+| `icqq guild share` | 分享频道帖子 |
+| `icqq guild forum-url` | 获取论坛 URL |
 
 ## 架构
 
