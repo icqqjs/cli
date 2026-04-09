@@ -134,17 +134,33 @@ export function ChannelChatSession({ ipc, guildId, channelId, channelName }: Pro
       </Box>
 
       <Box marginTop={1}>
-        {mode === "emoji" ? (
-          emoji.render()
-        ) : (
-          <Text>
-            <Text color="cyan" bold>{sending ? "发送中…" : `${label}>`}</Text>
-            {" "}
-            {input}
-            <Text color="cyan">█</Text>
-          </Text>
-        )}
+        <Text>
+          <Text color="cyan" bold>{sending ? "发送中…" : `${label}>`}</Text>
+          {" "}
+          {input}
+          <Text color="cyan">█</Text>
+        </Text>
       </Box>
+
+      {mode === "emoji" && (
+        <Box flexDirection="column" marginTop={1} borderStyle="single" borderColor="magenta" paddingX={1}>
+          <Text bold color="magenta">表情 <Text dimColor>(←→ 翻页 | ↑↓ 选择 | Enter: 插入 | Esc: 取消)</Text></Text>
+          <Text>搜索: {emoji.query}<Text color="cyan">█</Text></Text>
+          <Box flexDirection="column" marginTop={1}>
+            {emoji.pageItems.map(([faceId, name], i) => (
+              <Text key={faceId}>
+                {i === emoji.index ? <Text color="yellow">❯ </Text> : <Text>  </Text>}
+                <Text>{name}</Text>
+                <Text dimColor> [face:{faceId}]</Text>
+              </Text>
+            ))}
+            {emoji.filtered.length === 0 && <Text dimColor>无匹配表情</Text>}
+            {emoji.totalPages > 1 && (
+              <Text dimColor>第 {emoji.page + 1}/{emoji.totalPages} 页</Text>
+            )}
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }
