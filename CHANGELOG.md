@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/icqqjs/cli/compare/v1.1.0...v1.2.0) (2026-04-09)
+
+
+### Features
+
+* 添加子频道聊天功能及相关命令，优化频道管理 ([154ddb0](https://github.com/icqqjs/cli/commit/154ddb0536e0533fe5ea977169dab77bf59ffd11))
+* 添加频道相关命令，包括查看子频道、生成帖子分享URL、撤回消息、发送消息及分享功能 ([8647e76](https://github.com/icqqjs/cli/commit/8647e76a7199de966bffe76f56b86084ae974f7b))
+
 ## [1.1.0](https://github.com/icqqjs/cli/compare/v1.0.1...v1.1.0) (2026-04-09)
 
 
