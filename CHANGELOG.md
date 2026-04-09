@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/icqqjs/cli/compare/v1.4.0...v1.4.1) (2026-04-09)
+
+
+### Bug Fixes
+
+* 更新登录向导，新增协议版本步骤，优化平台选择和密码登录逻辑 ([b391454](https://github.com/icqqjs/cli/commit/b3914548997b3d757260d70aab9a78556a984a11))
+
 ## [1.4.0](https://github.com/icqqjs/cli/compare/v1.3.1...v1.4.0) (2026-04-09)
 
 
