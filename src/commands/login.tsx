@@ -78,7 +78,7 @@ type Props = {
   options: zod.infer<typeof options>;
 };
 
-type WizardStep = "qq" | "platform" | "sign_api" | "password" | "confirm";
+type WizardStep = "qq" | "ask_password" | "password" | "platform" | "ver" | "sign_api" | "confirm";
 type Status = "wizard" | "login" | "post-login" | "starting-daemon" | "done" | "error";
 
 /* ── Wizard prompt component ────────────────────────────── */
@@ -93,41 +93,70 @@ function WizardPrompt({
     qq?: number;
     platform: number;
     signApiUrl: string;
+    ver: string;
     password?: string;
   }) => void;
   initialQQ?: number;
   needPassword: boolean;
   savedAccount?: AccountConfig;
 }) {
-  const steps: WizardStep[] = [];
-  if (!initialQQ) steps.push("qq");
-  steps.push("platform", "sign_api");
-  if (needPassword) steps.push("password");
-  steps.push("confirm");
-
   const [stepIdx, setStepIdx] = useState(0);
   const [inputValue, setInputValue] = useState("");
 
   const [qq, setQQ] = useState(initialQQ ? String(initialQQ) : "");
-  const [platform, setPlatform] = useState(savedAccount?.platform ?? 1);
-  const [signApiUrl, setSignApiUrl] = useState(savedAccount?.signApiUrl ?? "");
+  const [wantPassword, setWantPassword] = useState(needPassword);
+  const [askPwIdx, setAskPwIdx] = useState(needPassword ? 0 : 1); // 0=是, 1=否
   const [password, setPassword] = useState("");
+  const [platformIdx, setPlatformIdx] = useState(
+    () => Math.max(0, PLATFORMS.findIndex((p) => p.value === (savedAccount?.platform ?? 1))),
+  );
+  const [platform, setPlatform] = useState(savedAccount?.platform ?? 1);
+  const [ver, setVer] = useState(savedAccount?.ver ?? "");
+  const [signApiUrl, setSignApiUrl] = useState(savedAccount?.signApiUrl ?? "");
+
+  // Compute steps dynamically based on password choice
+  const steps: WizardStep[] = [];
+  if (!initialQQ) steps.push("qq");
+  if (!needPassword) steps.push("ask_password");
+  if (wantPassword || needPassword) steps.push("password");
+  steps.push("platform", "ver", "sign_api", "confirm");
 
   const currentStep = steps[stepIdx]!;
 
   const advance = () => {
     setInputValue("");
-    if (stepIdx < steps.length - 1) {
-      setStepIdx(stepIdx + 1);
-    }
+    setStepIdx((prev) => prev + 1);
   };
 
   useInput((input, key) => {
-    if (currentStep === "platform") {
-      const num = Number(input);
-      if (num >= 1 && num <= 5) {
-        setPlatform(num);
+    // ask_password step: arrow toggle yes/no
+    if (currentStep === "ask_password") {
+      if (key.upArrow || key.downArrow) {
+        setAskPwIdx((prev) => (prev === 0 ? 1 : 0));
+        return;
+      }
+      if (key.return) {
+        setWantPassword(askPwIdx === 0);
         advance();
+        return;
+      }
+      return;
+    }
+
+    // platform step: arrow selection
+    if (currentStep === "platform") {
+      if (key.upArrow) {
+        setPlatformIdx((prev) => Math.max(0, prev - 1));
+        return;
+      }
+      if (key.downArrow) {
+        setPlatformIdx((prev) => Math.min(PLATFORMS.length - 1, prev + 1));
+        return;
+      }
+      if (key.return) {
+        setPlatform(PLATFORMS[platformIdx]!.value);
+        advance();
+        return;
       }
       return;
     }
@@ -138,16 +167,19 @@ function WizardPrompt({
           qq: qq ? Number(qq) : undefined,
           platform,
           signApiUrl,
+          ver,
           password: password || undefined,
         });
       }
       return;
     }
 
-    // Text input steps: qq, sign_api, password
+    // Text input steps: qq, ver, sign_api, password
     if (key.return) {
       if (currentStep === "qq") {
         setQQ(inputValue);
+      } else if (currentStep === "ver") {
+        setVer(inputValue);
       } else if (currentStep === "sign_api") {
         setSignApiUrl(inputValue);
       } else if (currentStep === "password") {
@@ -170,19 +202,26 @@ function WizardPrompt({
     if (currentStep === "sign_api" && savedAccount?.signApiUrl) {
       setInputValue(savedAccount.signApiUrl);
     }
-  }, [currentStep, savedAccount?.signApiUrl]);
+    if (currentStep === "ver" && savedAccount?.ver) {
+      setInputValue(savedAccount.ver);
+    }
+  }, [currentStep, savedAccount?.signApiUrl, savedAccount?.ver]);
 
   const completedEntries: [string, string][] = [];
   for (let i = 0; i < stepIdx; i++) {
     const s = steps[i]!;
     if (s === "qq") completedEntries.push(["QQ号", qq || "(扫码登录)"]);
+    if (s === "ask_password") completedEntries.push(["密码登录", wantPassword ? "是" : "否"]);
+    if (s === "password") completedEntries.push(["密码", "●".repeat(password.length || 1)]);
     if (s === "platform") {
       const p = PLATFORMS.find((x) => x.value === platform);
-      completedEntries.push(["平台", `${platform} - ${p?.label}`]);
+      completedEntries.push(["平台", `${p?.label ?? platform}`]);
     }
+    if (s === "ver") completedEntries.push(["协议版本", ver || "(默认)"]);
     if (s === "sign_api") completedEntries.push(["签名API", signApiUrl || "(无)"]);
-    if (s === "password") completedEntries.push(["密码", "●".repeat(password.length || 1)]);
   }
+
+  const ASK_PW_OPTIONS = ["是", "否"] as const;
 
   return (
     <Box flexDirection="column" paddingX={1}>
@@ -210,27 +249,16 @@ function WizardPrompt({
         </Box>
       )}
 
-      {currentStep === "platform" && (
+      {currentStep === "ask_password" && (
         <Box marginTop={1} flexDirection="column">
-          <Text>选择登录平台 <Text dimColor>(输入数字)</Text>:</Text>
-          {PLATFORMS.map((p) => (
-            <Text key={p.value}>
-              <Text color={p.value === platform ? "cyan" : undefined}>
-                {p.value === platform ? "❯ " : "  "}
-                {p.value}. {p.label}
+          <Text>是否使用密码登录？ <Text dimColor>(↑↓选择, 回车确认)</Text></Text>
+          {ASK_PW_OPTIONS.map((label, i) => (
+            <Text key={label}>
+              <Text color={i === askPwIdx ? "cyan" : undefined}>
+                {i === askPwIdx ? "❯ " : "  "}{label}
               </Text>
             </Text>
           ))}
-        </Box>
-      )}
-
-      {currentStep === "sign_api" && (
-        <Box marginTop={1} flexDirection="column">
-          <Text>签名API地址 <Text dimColor>(可留空跳过)</Text>:</Text>
-          <Box>
-            <Text color="green">❯ </Text>
-            <Text>{inputValue}<Text color="cyan">█</Text></Text>
-          </Box>
         </Box>
       )}
 
@@ -240,6 +268,40 @@ function WizardPrompt({
           <Box>
             <Text color="green">❯ </Text>
             <Text>{"●".repeat(inputValue.length)}<Text color="cyan">█</Text></Text>
+          </Box>
+        </Box>
+      )}
+
+      {currentStep === "platform" && (
+        <Box marginTop={1} flexDirection="column">
+          <Text>选择登录平台 <Text dimColor>(↑↓选择, 回车确认)</Text>:</Text>
+          {PLATFORMS.map((p, i) => (
+            <Text key={p.value}>
+              <Text color={i === platformIdx ? "cyan" : undefined}>
+                {i === platformIdx ? "❯ " : "  "}
+                {p.value}. {p.label}
+              </Text>
+            </Text>
+          ))}
+        </Box>
+      )}
+
+      {currentStep === "ver" && (
+        <Box marginTop={1} flexDirection="column">
+          <Text>协议版本 (ver) <Text dimColor>(如 9.1.70，可留空使用默认)</Text>:</Text>
+          <Box>
+            <Text color="green">❯ </Text>
+            <Text>{inputValue}<Text color="cyan">█</Text></Text>
+          </Box>
+        </Box>
+      )}
+
+      {currentStep === "sign_api" && (
+        <Box marginTop={1} flexDirection="column">
+          <Text>签名API地址 <Text dimColor>(可留空跳过)</Text>:</Text>
+          <Box>
+            <Text color="green">❯ </Text>
+            <Text>{inputValue}<Text color="cyan">█</Text></Text>
           </Box>
         </Box>
       )}
@@ -266,8 +328,8 @@ export default function Login({ options: opts }: Props) {
   const [savedAccount, setSavedAccount] = useState<AccountConfig | undefined>();
   const [resolvedQQ, setResolvedQQ] = useState<number | undefined>(opts.q);
   const [finalOpts, setFinalOpts] = useState<{
-    qq?: number; password?: string; platform: number; signApiUrl: string;
-  }>({ platform: 1, signApiUrl: "" });
+    qq?: number; password?: string; platform: number; signApiUrl: string; ver: string;
+  }>({ platform: 1, signApiUrl: "", ver: "" });
 
   // Load config on mount & check if already running
   useEffect(() => {
@@ -336,6 +398,7 @@ export default function Login({ options: opts }: Props) {
     qq?: number;
     platform: number;
     signApiUrl: string;
+    ver: string;
     password?: string;
   }) => {
     const merged = { ...result };
@@ -356,7 +419,7 @@ export default function Login({ options: opts }: Props) {
     const c = createClient({
       platform: merged.platform as Platform,
       sign_api_addr: merged.signApiUrl || undefined,
-      ver: savedAccount?.ver || undefined,
+      ver: merged.ver || savedAccount?.ver || undefined,
       data_dir: dir,
       log_level: "warn",
     });
@@ -390,7 +453,7 @@ export default function Login({ options: opts }: Props) {
       setAccountConfig(config, actualUin, {
         platform: finalOpts.platform,
         signApiUrl: finalOpts.signApiUrl ?? "",
-        ver: savedAccount?.ver,
+        ver: finalOpts.ver || savedAccount?.ver,
       });
       config.currentUin = actualUin;
       await saveConfig(config);
