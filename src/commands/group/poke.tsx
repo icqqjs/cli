@@ -3,8 +3,7 @@ import zod from "zod";
 import { argument } from "pastel";
 import { IpcMutate } from "@/components/IpcCommand.js";
 import { Actions } from "@/daemon/protocol.js";
-import { GroupSelector } from "@/components/GroupSelector.js";
-import { MemberSelector } from "@/components/MemberSelector.js";
+import { GroupSelector, MemberSelector } from "@/components/Selectors.js";
 
 export const description = "戳一戳群成员";
 

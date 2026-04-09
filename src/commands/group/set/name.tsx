@@ -3,7 +3,7 @@ import { Text, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
-import { GroupSelector } from "@/components/GroupSelector.js";
+import { GroupSelector } from "@/components/Selectors.js";
 import { resolveUin } from "@/lib/config.js";
 import { IpcClient } from "@/lib/ipc-client.js";
 import { isDaemonRunning } from "@/daemon/lifecycle.js";
@@ -61,6 +61,7 @@ function SetName({ gid, name }: { gid: number; name?: string }) {
 
   useEffect(() => {
     if (!loading) {
+      if (error) process.exitCode = 1;
       const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }

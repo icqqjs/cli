@@ -4,9 +4,10 @@ import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
 import { Table } from "@/components/Table.js";
-import { GroupSelector } from "@/components/GroupSelector.js";
+import { GroupSelector } from "@/components/Selectors.js";
 import { useIpcRequest } from "@/lib/use-ipc.js";
 import { Actions } from "@/daemon/protocol.js";
+import { isJsonMode } from "@/lib/json-mode.js";
 
 export const description = "查看群成员列表";
 
@@ -32,11 +33,19 @@ function MemberList({ gid }: { gid: number }) {
 
   useEffect(() => {
     if (!loading) {
+      if (isJsonMode()) {
+        console.log(JSON.stringify(error ? { ok: false, error } : data));
+        if (error) process.exitCode = 1;
+        setTimeout(() => exit(), 0);
+        return;
+      }
+      if (error) process.exitCode = 1;
       const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, error, exit]);
+  }, [loading, data, error, exit]);
 
+  if (isJsonMode()) return null;
   if (loading) return <Spinner label={`${uin ? `[${uin}] ` : ""}加载群 ${gid} 成员列表…`} />;
   if (error) return <Text color="red">✖ {error}</Text>;
 

@@ -3,7 +3,7 @@ import zod from "zod";
 import { argument, option } from "pastel";
 import { IpcMutate } from "@/components/IpcCommand.js";
 import { Actions } from "@/daemon/protocol.js";
-import { FriendSelector } from "@/components/FriendSelector.js";
+import { FriendSelector } from "@/components/Selectors.js";
 
 export const description = "删除好友";
 

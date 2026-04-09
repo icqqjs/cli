@@ -4,7 +4,7 @@ import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
 import { ChatSession } from "@/components/ChatSession.js";
-import { FriendSelector } from "@/components/FriendSelector.js";
+import { FriendSelector } from "@/components/Selectors.js";
 import { resolveUin } from "@/lib/config.js";
 import { IpcClient } from "@/lib/ipc-client.js";
 import { isDaemonRunning } from "@/daemon/lifecycle.js";

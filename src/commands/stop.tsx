@@ -57,6 +57,7 @@ export default function Stop({ args: [argUin] }: Props) {
 
   useEffect(() => {
     if (!loading) {
+      if (message && !success) process.exitCode = 1;
       const timer = setTimeout(() => exit(), message && !success ? 2000 : 100);
       return () => clearTimeout(timer);
     }

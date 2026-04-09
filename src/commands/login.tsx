@@ -272,9 +272,9 @@ export default function Login({ options: opts }: Props) {
   useEffect(() => {
     void (async () => {
       try {
-        // Resolve target uin: explicit -q or fallback to defaultUin
+        // Resolve target uin: explicit -q or fallback to currentUin
         const config = await loadConfig();
-        const targetUin = opts.q ?? config.defaultUin;
+        const targetUin = opts.q ?? config.currentUin;
 
         // Check if daemon already running
         if (targetUin && await isDaemonRunning(targetUin)) {
@@ -302,7 +302,7 @@ export default function Login({ options: opts }: Props) {
         // Quick reconnect: skip wizard, directly spawn daemon with cached token
         if (opts.r) {
           if (!targetUin) {
-            setError("快速重连需要指定 QQ 号 (-q) 或已设置 defaultUin");
+            setError("快速重连需要指定 QQ 号 (-q) 或已设置 currentUin");
             setStatus("error");
             return;
           }
@@ -325,6 +325,7 @@ export default function Login({ options: opts }: Props) {
 
   useEffect(() => {
     if (status === "done" || status === "error") {
+      if (status === "error") process.exitCode = 1;
       const timer = setTimeout(() => exit(), status === "error" ? 2000 : 300);
       return () => clearTimeout(timer);
     }
@@ -389,7 +390,7 @@ export default function Login({ options: opts }: Props) {
         signApiUrl: finalOpts.signApiUrl ?? "",
         ver: savedAccount?.ver,
       });
-      config.defaultUin = actualUin;
+      config.currentUin = actualUin;
       await saveConfig(config);
 
       // Terminate login client (don't logout — preserve token)

@@ -34,7 +34,7 @@ export default function ConfigGet({ args: [key] }: Props) {
         if (key) {
           if (!(key in config)) {
             throw new Error(
-              `未知配置项: ${key}\n可用: defaultUin, webhookUrl, notifyEnabled, accounts`,
+              `未知配置项: ${key}\n可用: currentUin, webhookUrl, notifyEnabled, accounts`,
             );
           }
           const val = (config as any)[key];
@@ -43,7 +43,7 @@ export default function ConfigGet({ args: [key] }: Props) {
           setOutput([[key, display]]);
         } else {
           const entries: [string, string][] = [
-            ["defaultUin", String(config.defaultUin ?? "(未设置)")],
+            ["currentUin", String(config.currentUin ?? "(未设置)")],
             ["webhookUrl", config.webhookUrl || "(未设置)"],
             ["notifyEnabled", String(config.notifyEnabled ?? false)],
             [
@@ -64,6 +64,7 @@ export default function ConfigGet({ args: [key] }: Props) {
 
   useEffect(() => {
     if (!loading) {
+      if (error) process.exitCode = 1;
       const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }

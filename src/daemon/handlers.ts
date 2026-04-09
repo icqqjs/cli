@@ -10,15 +10,33 @@ type Handler = (
 
 /** Extract group_id from params (accepts both group_id and gid) */
 function gid(p: Record<string, unknown>): number {
-  return Number(p.group_id ?? p.gid);
+  const v = Number(p.group_id ?? p.gid);
+  if (!Number.isFinite(v) || v <= 0) throw new Error("无效的 group_id");
+  return v;
 }
 /** Extract user_id from params (accepts both user_id and uid) */
 function uid(p: Record<string, unknown>): number {
-  return Number(p.user_id ?? p.uid);
+  const v = Number(p.user_id ?? p.uid);
+  if (!Number.isFinite(v) || v <= 0) throw new Error("无效的 user_id");
+  return v;
 }
 /** Extract message_id from params */
 function msgid(p: Record<string, unknown>): string {
-  return (p.message_id ?? p.msgid) as string;
+  const v = p.message_id ?? p.msgid;
+  if (typeof v !== "string" || !v) throw new Error("无效的 message_id");
+  return v;
+}
+/** Validate that a string param is present */
+function requireString(p: Record<string, unknown>, key: string): string {
+  const v = p[key];
+  if (typeof v !== "string" || !v) throw new Error(`缺少参数: ${key}`);
+  return v;
+}
+/** Validate file path: must be a non-empty string, no path traversal */
+function safeFilePath(p: Record<string, unknown>, key = "file"): string {
+  const v = requireString(p, key);
+  if (v.includes("\0")) throw new Error("无效的文件路径");
+  return v;
 }
 
 const handlers: Record<string, Handler> = {
@@ -108,12 +126,12 @@ const handlers: Record<string, Handler> = {
 
   // ── 消息发送 ──
   [Actions.SEND_PRIVATE_MSG]: async (client, params) => {
-    const message = parseMessage(params.message as string);
+    const message = parseMessage(requireString(params, "message"));
     return await client.pickFriend(uid(params)).sendMsg(message);
   },
 
   [Actions.SEND_GROUP_MSG]: async (client, params) => {
-    const message = parseMessage(params.message as string);
+    const message = parseMessage(requireString(params, "message"));
     return await client.pickGroup(gid(params)).sendMsg(message);
   },
 
@@ -187,7 +205,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.SET_AVATAR]: async (client, params) => {
-    const filePath = params.file as string;
+    const filePath = safeFilePath(params);
     const buf = await fs.readFile(filePath);
     await client.setAvatar(buf);
     return { ok: true };
@@ -203,7 +221,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.SET_GROUP_AVATAR]: async (client, params) => {
-    const filePath = params.file as string;
+    const filePath = safeFilePath(params);
     const buf = await fs.readFile(filePath);
     await client.setGroupPortrait(gid(params), buf);
     return { ok: true };
@@ -447,7 +465,7 @@ const handlers: Record<string, Handler> = {
 
   // ── 其他 ──
   [Actions.IMAGE_OCR]: async (client, params) => {
-    const filePath = params.file as string;
+    const filePath = safeFilePath(params);
     const buf = await fs.readFile(filePath);
     return await client.imageOcr(buf);
   },
@@ -503,8 +521,7 @@ const handlers: Record<string, Handler> = {
 
   [Actions.SEND_TEMP_MSG]: async (client, params) => {
     const g = gid(params);
-    if (!Number.isFinite(g) || g <= 0) throw new Error("无效的 group_id");
-    const message = parseMessage(params.message as string);
+    const message = parseMessage(requireString(params, "message"));
     return await client.sendTempMsg(g, uid(params), message);
   },
 
@@ -520,13 +537,13 @@ const handlers: Record<string, Handler> = {
 
   // ── 文件传输 ──
   [Actions.SEND_PRIVATE_FILE]: async (client, params) => {
-    const filePath = params.file as string;
+    const filePath = safeFilePath(params);
     const u = uid(params);
     return await client.pickFriend(u).sendFile(filePath);
   },
 
   [Actions.SEND_GROUP_FILE]: async (client, params) => {
-    const filePath = params.file as string;
+    const filePath = safeFilePath(params);
     const g = gid(params);
     const pid = (params.pid as string) ?? "/";
     const name = (params.name as string) ?? undefined;
@@ -539,7 +556,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.GFS_UPLOAD]: async (client, params) => {
-    const filePath = params.file as string;
+    const filePath = safeFilePath(params);
     const g = gid(params);
     const pid = (params.pid as string) ?? "/";
     const name = (params.name as string) ?? undefined;
@@ -591,9 +608,9 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.GUILD_SEND_MSG]: async (client, params) => {
-    const guildId = params.guild_id as string;
-    const channelId = params.channel_id as string;
-    const message = parseMessage(params.message as string);
+    const guildId = requireString(params, "guild_id");
+    const channelId = requireString(params, "channel_id");
+    const message = parseMessage(requireString(params, "message"));
     return await client.sendGuildMsg(guildId, channelId, message);
   },
 

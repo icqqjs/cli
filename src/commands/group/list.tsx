@@ -4,6 +4,7 @@ import { Spinner } from "@/components/Spinner.js";
 import { Table } from "@/components/Table.js";
 import { useIpcRequest } from "@/lib/use-ipc.js";
 import { Actions } from "@/daemon/protocol.js";
+import { isJsonMode } from "@/lib/json-mode.js";
 
 export const description = "查看群组列表";
 
@@ -13,11 +14,19 @@ export default function ListGroup() {
 
   useEffect(() => {
     if (!loading) {
+      if (isJsonMode()) {
+        console.log(JSON.stringify(error ? { ok: false, error } : data));
+        if (error) process.exitCode = 1;
+        setTimeout(() => exit(), 0);
+        return;
+      }
+      if (error) process.exitCode = 1;
       const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, error, exit]);
+  }, [loading, data, error, exit]);
 
+  if (isJsonMode()) return null;
   if (loading) return <Spinner label={`${uin ? `[${uin}] ` : ""}加载群列表…`} />;
   if (error) return <Text color="red">✖ {error}</Text>;
 

@@ -5,6 +5,7 @@ import { loadConfig } from "@/lib/config.js";
 import { isDaemonRunning, getDaemonPid } from "@/daemon/lifecycle.js";
 import { IpcClient } from "@/lib/ipc-client.js";
 import { Actions } from "@/daemon/protocol.js";
+import { isJsonMode } from "@/lib/json-mode.js";
 
 export const description = "查看所有实例状态";
 
@@ -43,7 +44,7 @@ export default function Status() {
               uin,
               running: false,
               pid: null,
-              isDefault: uin === config.defaultUin,
+              isDefault: uin === config.currentUin,
             };
 
             const running = await isDaemonRunning(uin);
@@ -87,10 +88,27 @@ export default function Status() {
 
   useEffect(() => {
     if (!loading) {
+      if (error) process.exitCode = 1;
+
+      if (isJsonMode()) {
+        if (error) {
+          console.log(JSON.stringify({ ok: false, error }));
+        } else {
+          console.log(JSON.stringify(instances, null, 2));
+        }
+        const timer = setTimeout(() => exit(), 0);
+        return () => clearTimeout(timer);
+      }
+
       const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, error, exit]);
+  }, [loading, error, instances, exit]);
+
+  if (isJsonMode()) {
+    if (loading) return null;
+    return null;
+  }
 
   if (loading) return <Spinner label="查询所有实例…" />;
   if (error) return <Text color="red">✖ {error}</Text>;

@@ -49,7 +49,7 @@ icqq login -q 12345 -r
 
 ## 多实例支持
 
-通过 `-u` 全局参数或 `ICQQ_CURRENT_UIN` 环境变量指定操作的账号，默认使用 `defaultUin`。
+通过 `-u` 全局参数或 `ICQQ_CURRENT_UIN` 环境变量指定操作的账号，默认使用 `currentUin`。
 
 ```bash
 icqq -u 12345 profile
@@ -66,6 +66,7 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq login -r` | 使用已保存 token 快速重连 |
 | `icqq status` | 查看所有守护进程状态 |
 | `icqq stop` | 停止守护进程 |
+| `icqq switch [qq]` | 切换当前操作的账号 |
 | `icqq profile` | 查看个人资料 |
 | `icqq requests` | 查看待处理的好友/群请求 |
 
@@ -183,9 +184,34 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 
 ## 架构
 
-- **守护进程**：登录后在后台运行，通过 Unix Domain Socket（IPC）与 CLI 通信
+```
+┌──────────────────────────────────────────────────────┐
+│                     icqq CLI                         │
+│  ┌────────────┐  ┌────────────┐  ┌───────────────┐  │
+│  │  Pastel     │  │  React Ink │  │  IPC Client   │  │
+│  │  文件路由   │─▸│  终端 UI   │  │  (ipc-client) │  │
+│  └────────────┘  └────────────┘  └───────┬───────┘  │
+└──────────────────────────────────────────┬───────────┘
+                                           │ Unix Socket
+                                           │ + Token 认证
+┌──────────────────────────────────────────┴───────────┐
+│                   守护进程 (Daemon)                    │
+│  ┌────────────┐  ┌────────────┐  ┌───────────────┐  │
+│  │  icqq      │  │  IPC       │  │  Webhook      │  │
+│  │  Client    │◂─│  Server    │─▸│  推送          │  │
+│  │  (QQ协议)  │  │  (server)  │  │  (HTTP POST)  │  │
+│  └─────┬──────┘  └────────────┘  └───────────────┘  │
+└────────┼─────────────────────────────────────────────┘
+         │
+         ▼
+   腾讯 QQ 服务器
+```
+
+- **CLI 层**：基于 [Pastel](https://github.com/nickstefan/pastel) 文件系统路由，`src/commands/` 目录结构即命令结构；React Ink 渲染终端 UI
+- **IPC 通信**：CLI 与守护进程通过 `~/.icqq/<uin>/daemon.sock` Unix Socket 通信，首次连接需 Token 认证
+- **守护进程**：登录后在后台运行，管理 icqq 客户端实例，自动断线重连（指数退避，最多 5 次）
 - **Webhook**：可选配置，守护进程将消息事件 POST 到指定 URL
-- **文件路由**：基于 [Pastel](https://github.com/nickstefan/pastel) 的文件系统路由，`src/commands/` 目录结构即命令结构
+- **日志轮转**：守护进程日志 > 5MB 自动轮转
 
 ## 开发
 

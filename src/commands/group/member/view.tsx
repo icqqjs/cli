@@ -3,8 +3,7 @@ import { Text, Box, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
-import { GroupSelector } from "@/components/GroupSelector.js";
-import { MemberSelector } from "@/components/MemberSelector.js";
+import { GroupSelector, MemberSelector } from "@/components/Selectors.js";
 import { resolveUin } from "@/lib/config.js";
 import { IpcClient } from "@/lib/ipc-client.js";
 import { isDaemonRunning } from "@/daemon/lifecycle.js";
@@ -73,6 +72,7 @@ function MemberInfo({ gid, uid }: { gid: number; uid: number }) {
 
   useEffect(() => {
     if (!loading) {
+      if (error) process.exitCode = 1;
       const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }

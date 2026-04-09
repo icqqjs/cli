@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "start": "node dist/cli.js",
     "clean": "node --eval \"fs.rmSync('dist', { recursive: true, force: true })\"",
+    "test": "vitest run",
     "prepublishOnly": "npm run typecheck && npm run build"
   },
   "keywords": [
@@ -39,7 +40,8 @@
     "@types/node": "^25.5.0",
     "@types/react": "^19.0.0",
     "tsdown": "^0.21.7",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.3"
   },
   "dependencies": {
     "@icqqjs/icqq": "^1.10.18",

@@ -61,6 +61,7 @@ export default function WebhookView() {
 
   useEffect(() => {
     if (!loading) {
+      if (error) process.exitCode = 1;
       const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }

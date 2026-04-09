@@ -4,7 +4,7 @@ import zod from "zod";
 import { argument } from "pastel";
 import { IpcCommand } from "@/components/IpcCommand.js";
 import { Actions } from "@/daemon/protocol.js";
-import { GroupSelector } from "@/components/GroupSelector.js";
+import { GroupSelector } from "@/components/Selectors.js";
 
 export const description = "查看@全体成员剩余次数";
 

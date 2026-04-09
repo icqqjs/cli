@@ -9,6 +9,7 @@ export function Spinner({ label }: { label?: string }) {
   const startRef = useRef(Date.now());
 
   useEffect(() => {
+    // 80ms per frame ≈ 12.5fps，提供平滑的旋转动画
     const timer = setInterval(() => {
       setFrame((prev) => (prev + 1) % frames.length);
       setElapsed(Math.floor((Date.now() - startRef.current) / 1000));

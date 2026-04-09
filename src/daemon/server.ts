@@ -15,19 +15,37 @@ type Subscription = {
   reqId: string;
 };
 
+/**
+ * 守护进程 IPC 服务端。
+ *
+ * 职责：
+ *   - 监听 Unix Domain Socket，接受 CLI 客户端连接
+ *   - 对每个连接进行 Token 认证（首条消息必须为 auth）
+ *   - 将 IPC 请求分发给 handlers 处理
+ *   - 管理消息订阅（SUBSCRIBE/UNSUBSCRIBE）
+ *   - 将 QQ 消息转发到已订阅的客户端、Webhook、系统通知
+ *
+ * 生命周期：
+ *   1. new DaemonServer(client, uin, ipcToken)
+ *   2. await server.start()   — 创建 Socket 文件并开始监听
+ *   3. await server.stop()    — 断开所有连接并关闭服务
+ */
 export class DaemonServer {
   private server: net.Server;
   private client: Client;
   private uin: number;
+  private ipcToken: string;
   private subscriptions = new Map<string, Subscription[]>();
   private sockets = new Map<string, net.Socket>();
+  private authedSockets = new Set<string>();
   private nextSocketId = 0;
   private webhookUrl = "";
   private notifyEnabled = false;
 
-  constructor(client: Client, uin: number) {
+  constructor(client: Client, uin: number, ipcToken: string) {
     this.client = client;
     this.uin = uin;
+    this.ipcToken = ipcToken;
     this.server = net.createServer((socket) => this.handleConnection(socket));
     this.setupMessageForwarding();
     void this.loadWebhook();
@@ -48,6 +66,7 @@ export class DaemonServer {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uin: this.uin, ...payload }),
+        // Webhook 推送超时 10s，避免阻塞消息流
         signal: AbortSignal.timeout(10000),
       });
     } catch (e) {
@@ -58,10 +77,8 @@ export class DaemonServer {
   private setupMessageForwarding() {
     this.client.on("message", (event) => {
       const msgType = event.message_type;
-      const targetId =
-        msgType === "group"
-          ? (event as any).group_id
-          : event.user_id;
+      const groupId = "group_id" in event ? (event.group_id as number) : 0;
+      const targetId = msgType === "group" ? groupId : event.user_id;
 
       const eventData = {
         type: msgType,
@@ -71,9 +88,7 @@ export class DaemonServer {
           event.sender?.nickname ?? String(event.user_id),
         raw_message: stringifyMessage(event.message),
         time: event.time,
-        ...(msgType === "group"
-          ? { group_id: (event as any).group_id }
-          : {}),
+        ...(msgType === "group" ? { group_id: groupId } : {}),
       };
 
       // Push to webhook
@@ -137,6 +152,19 @@ export class DaemonServer {
         if (!line.trim()) continue;
         try {
           const req = JSON.parse(line) as IpcRequest;
+
+          // First message must be auth
+          if (!this.authedSockets.has(socketId)) {
+            if (req.action === "auth" && req.params.token === this.ipcToken) {
+              this.authedSockets.add(socketId);
+              this.sendToSocket(socket, { id: req.id, ok: true, data: { authed: true } });
+            } else {
+              this.sendToSocket(socket, { id: req.id, ok: false, error: "认证失败" });
+              socket.destroy();
+            }
+            continue;
+          }
+
           void this.processRequest(socketId, socket, req);
         } catch {
           // ignore malformed JSON
@@ -147,11 +175,13 @@ export class DaemonServer {
     socket.on("close", () => {
       this.sockets.delete(socketId);
       this.subscriptions.delete(socketId);
+      this.authedSockets.delete(socketId);
     });
 
     socket.on("error", () => {
       this.sockets.delete(socketId);
       this.subscriptions.delete(socketId);
+      this.authedSockets.delete(socketId);
     });
   }
 
@@ -192,6 +222,26 @@ export class DaemonServer {
 
     if (req.action === Actions.SET_WEBHOOK) {
       const url = (req.params.url as string) ?? "";
+      if (url) {
+        try {
+          const parsed = new URL(url);
+          if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+            this.sendToSocket(socket, {
+              id: req.id,
+              ok: false,
+              error: "Webhook URL 仅支持 http/https 协议",
+            });
+            return;
+          }
+        } catch {
+          this.sendToSocket(socket, {
+            id: req.id,
+            ok: false,
+            error: "无效的 Webhook URL",
+          });
+          return;
+        }
+      }
       this.webhookUrl = url;
       try {
         const config = await loadConfig();
@@ -240,8 +290,17 @@ export class DaemonServer {
       return;
     }
 
-    const response = await handleRequest(this.client, req);
-    this.sendToSocket(socket, response);
+    try {
+      const response = await handleRequest(this.client, req);
+      this.sendToSocket(socket, response);
+    } catch (err) {
+      this.sendToSocket(socket, {
+        id: req.id,
+        ok: false,
+        data: null,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   async start(): Promise<void> {
@@ -254,7 +313,12 @@ export class DaemonServer {
 
     return new Promise((resolve, reject) => {
       this.server.on("error", reject);
-      this.server.listen(sockPath, () => resolve());
+      this.server.listen(sockPath, async () => {
+        try {
+          await fs.chmod(sockPath, 0o600);
+        } catch { /* ignore */ }
+        resolve();
+      });
     });
   }
 

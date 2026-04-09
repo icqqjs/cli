@@ -1,7 +1,8 @@
 import fs from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import { createIcqqClient } from "@/lib/client.js";
 import { loadConfig, getAccountConfig } from "@/lib/config.js";
-import { getAccountDir, getPidPath, getSocketPath } from "@/lib/paths.js";
+import { getAccountDir, getPidPath, getSocketPath, getTokenPath } from "@/lib/paths.js";
 import { sendNotification } from "@/lib/notify.js";
 import { DaemonServer } from "./server.js";
 
@@ -19,8 +20,12 @@ async function main() {
     process.exit(1);
   }
 
-  await fs.mkdir(getAccountDir(uin), { recursive: true });
-  await fs.writeFile(getPidPath(uin), String(process.pid));
+  await fs.mkdir(getAccountDir(uin), { recursive: true, mode: 0o700 });
+  await fs.writeFile(getPidPath(uin), String(process.pid), { mode: 0o600 });
+
+  // Generate IPC auth token
+  const ipcToken = randomBytes(32).toString("hex");
+  await fs.writeFile(getTokenPath(uin), ipcToken, { mode: 0o600 });
 
   const client = createIcqqClient(uin, account);
 
@@ -47,7 +52,7 @@ async function main() {
   });
 
   // Start IPC server
-  const server = new DaemonServer(client, uin);
+  const server = new DaemonServer(client, uin, ipcToken);
   await server.start();
   console.log(
     `[daemon] 账号 ${uin} 已上线, socket: ${getSocketPath(uin)}`,
@@ -79,18 +84,58 @@ async function main() {
     } catch {
       /* ignore */
     }
+    try {
+      await fs.unlink(getTokenPath(uin));
+    } catch {
+      /* ignore */
+    }
     process.exit(0);
   };
 
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
   process.on("SIGINT", () => void shutdown("SIGINT"));
 
-  // Offline events
+  // Offline events — auto reconnect on network loss
+  let reconnecting = false;
+  const autoReconnect = async () => {
+    if (reconnecting) return;
+    reconnecting = true;
+    const maxRetries = 5;
+    const delays = [5, 10, 30, 60, 120]; // seconds
+    for (let i = 0; i < maxRetries; i++) {
+      const delay = delays[i]!;
+      console.log(`[daemon] ${delay}s 后尝试第 ${i + 1} 次重连…`);
+      await new Promise((r) => setTimeout(r, delay * 1000));
+      try {
+        await client.login(uin);
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error("重连超时")), 15000);
+          client.once("system.online", () => { clearTimeout(timer); resolve(); });
+          client.once("system.login.error", (e) => { clearTimeout(timer); reject(new Error(e.message)); });
+        });
+        console.log(`[daemon] 重连成功`);
+        if (config.notifyEnabled) {
+          sendNotification({ title: "icqq", body: "网络已恢复，重连成功" });
+        }
+        reconnecting = false;
+        return;
+      } catch (e) {
+        console.log(`[daemon] 第 ${i + 1} 次重连失败: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+    console.log(`[daemon] ${maxRetries} 次重连均失败，放弃重连`);
+    if (config.notifyEnabled) {
+      sendNotification({ title: "icqq", body: `重连失败，请手动执行 icqq login -r` });
+    }
+    reconnecting = false;
+  };
+
   client.on("system.offline.network", (e) => {
     console.log("[daemon] 网络掉线:", e.message);
     if (config.notifyEnabled) {
       sendNotification({ title: "icqq", body: `网络掉线: ${e.message}` });
     }
+    void autoReconnect();
   });
   client.on("system.offline.kickoff", (e) => {
     console.log("[daemon] 被踢下线:", e.message);

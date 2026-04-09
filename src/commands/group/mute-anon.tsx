@@ -3,7 +3,7 @@ import zod from "zod";
 import { argument, option } from "pastel";
 import { IpcMutate } from "@/components/IpcCommand.js";
 import { Actions } from "@/daemon/protocol.js";
-import { GroupSelector } from "@/components/GroupSelector.js";
+import { GroupSelector } from "@/components/Selectors.js";
 
 export const description = "禁言匿名成员";
 

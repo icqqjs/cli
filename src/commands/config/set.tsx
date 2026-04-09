@@ -11,7 +11,7 @@ export const args = zod.tuple([
   zod.string().describe(
     argument({
       name: "key",
-      description: "配置项名称 (defaultUin, webhookUrl, notifyEnabled)",
+      description: "配置项名称 (currentUin, webhookUrl, notifyEnabled)",
     }),
   ),
   zod.string().describe(
@@ -26,14 +26,14 @@ type Props = {
   args: zod.infer<typeof args>;
 };
 
-const VALID_KEYS = ["defaultUin", "webhookUrl", "notifyEnabled"] as const;
+const VALID_KEYS = ["currentUin", "webhookUrl", "notifyEnabled"] as const;
 type ConfigKey = (typeof VALID_KEYS)[number];
 
 function parseValue(key: ConfigKey, raw: string): unknown {
   switch (key) {
-    case "defaultUin":
+    case "currentUin":
       const n = Number(raw);
-      if (Number.isNaN(n) || n <= 0) throw new Error("defaultUin 必须为正整数");
+      if (Number.isNaN(n) || n <= 0) throw new Error("currentUin 必须为正整数");
       return n;
     case "notifyEnabled":
       if (raw === "true" || raw === "1") return true;
@@ -73,6 +73,7 @@ export default function ConfigSet({ args: [key, value] }: Props) {
 
   useEffect(() => {
     if (!loading) {
+      if (error) process.exitCode = 1;
       const timer = setTimeout(() => exit(), error ? 2000 : 100);
       return () => clearTimeout(timer);
     }

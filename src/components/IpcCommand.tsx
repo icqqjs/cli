@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
 import { Spinner } from "./Spinner.js";
 import { useIpcConnection } from "@/lib/use-ipc-connection.js";
+import { isJsonMode } from "@/lib/json-mode.js";
 
 type Props = {
   action: string;
@@ -37,10 +38,28 @@ export function IpcCommand({ action, params, render, loadingText }: Props) {
   useEffect(() => {
     if (!loading || connError) {
       const hasError = !!(connError || error);
-      const timer = setTimeout(() => exit(), hasError ? 2000 : 100);
+      if (hasError) process.exitCode = 1;
+
+      // JSON mode: print data and exit immediately
+      if (isJsonMode()) {
+        if (hasError) {
+          console.error(JSON.stringify({ ok: false, error: connError || error }));
+        } else {
+          console.log(JSON.stringify(data, null, 2));
+        }
+        const timer = setTimeout(() => exit(), 0);
+        return () => clearTimeout(timer);
+      }
+
+      const timer = setTimeout(() => exit(), hasError ? 2000 : 1500);
       return () => clearTimeout(timer);
     }
-  }, [loading, connError, error, exit]);
+  }, [loading, connError, error, data, exit]);
+
+  if (isJsonMode()) {
+    if (loading && !connError) return null;
+    return null;
+  }
 
   if (connError) return <Text color="red">✖ {connError}</Text>;
   if (loading) return <Spinner label={`${uin ? `[${uin}] ` : ""}${loadingText ?? "执行中…"}`} />;
