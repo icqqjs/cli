@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/icqqjs/cli/compare/v1.3.0...v1.3.1) (2026-04-09)
+
+
+### Bug Fixes
+
+* 删除频道相关命令，包括查看子频道、生成帖子分享URL、撤回消息、发送消息及分享功能 ([3966a7a](https://github.com/icqqjs/cli/commit/3966a7aabdc69f2612baa04dfbd111e855f83961))
+
 ## [1.3.0](https://github.com/icqqjs/cli/compare/v1.2.0...v1.3.0) (2026-04-09)
 
 
