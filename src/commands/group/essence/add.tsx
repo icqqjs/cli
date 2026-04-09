@@ -15,7 +15,7 @@ type Props = { args: zod.infer<typeof args> };
 export default function EssenceAdd({ args: [message_id] }: Props) {
   return (
     <IpcMutate
-      action={Actions.GROUP_SET_ESSENCE}
+      action={Actions.GROUP_ESSENCE_ADD}
       params={{ message_id }}
       loadingText="设为精华…"
       successText="已设为精华消息"

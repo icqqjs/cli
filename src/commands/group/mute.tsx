@@ -27,7 +27,7 @@ export default function GroupMute({ args: [gid, uid], options: { duration } }: P
 
   return (
     <IpcMutate
-      action={Actions.GROUP_MUTE_MEMBER}
+      action={Actions.GROUP_MUTE}
       params={{ group_id: selectedGid, user_id: selectedUid, duration }}
       loadingText="设置禁言…"
       successText={duration === 0 ? "已解除禁言" : `已禁言 ${duration} 秒`}

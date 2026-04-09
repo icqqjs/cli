@@ -14,8 +14,8 @@
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
     "start": "node dist/cli.js",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run build"
+    "clean": "node --eval \"fs.rmSync('dist', { recursive: true, force: true })\"",
+    "prepublishOnly": "npm run typecheck && npm run build"
   },
   "keywords": [
     "qq",

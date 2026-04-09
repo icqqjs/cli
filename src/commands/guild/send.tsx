@@ -1,0 +1,26 @@
+import React from "react";
+import zod from "zod";
+import { argument } from "pastel";
+import { IpcMutate } from "@/components/IpcCommand.js";
+import { Actions } from "@/daemon/protocol.js";
+
+export const description = "发送频道消息";
+
+export const args = zod.tuple([
+  zod.string().describe(argument({ name: "guild_id", description: "频道ID" })),
+  zod.string().describe(argument({ name: "channel_id", description: "子频道ID" })),
+  zod.string().describe(argument({ name: "message", description: "消息内容" })),
+]);
+
+type Props = { args: zod.infer<typeof args> };
+
+export default function GuildSend({ args: [guildId, channelId, message] }: Props) {
+  return (
+    <IpcMutate
+      action={Actions.GUILD_SEND_MSG}
+      params={{ guild_id: guildId, channel_id: channelId, message }}
+      loadingText="发送频道消息…"
+      successText="频道消息已发送"
+    />
+  );
+}

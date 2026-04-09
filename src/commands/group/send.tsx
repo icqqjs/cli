@@ -4,7 +4,7 @@ import { argument } from "pastel";
 import { IpcMutate } from "@/components/IpcCommand.js";
 import { Actions } from "@/daemon/protocol.js";
 
-export const description = "发送群消息";
+export const description = "发送群消息（同 icqq send group <gid> <message>）";
 
 export const args = zod.tuple([
   zod.number().describe(
