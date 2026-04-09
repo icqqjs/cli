@@ -7,24 +7,24 @@ import type { IpcClient } from "@/lib/ipc-client.js";
 /** 每页显示最多 15 个列表项（适配标准 24 行终端窗口，扣除标题、搜索框、状态栏） */
 const PAGE = 15;
 
-export type ListSelectorConfig<T> = {
+export type ListSelectorConfig<T, ID extends string | number = number> = {
   action: string;
   params?: Record<string, unknown>;
   title: string;
   loadingLabel: string;
   emptyLabel: string;
-  getId: (item: T) => number;
+  getId: (item: T) => ID;
   getFilterTexts: (item: T) => string[];
   renderItem: (item: T, selected: boolean) => ReactNode;
-  onSelect: (id: number) => void;
+  onSelect: (id: ID) => void;
 };
 
-function SelectorList<T>({
+function SelectorList<T, ID extends string | number>({
   ipc,
   config,
 }: {
   ipc: IpcClient;
-  config: ListSelectorConfig<T>;
+  config: ListSelectorConfig<T, ID>;
 }) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +105,7 @@ function SelectorList<T>({
   );
 }
 
-export function ListSelector<T>(props: ListSelectorConfig<T>) {
+export function ListSelector<T, ID extends string | number = number>(props: ListSelectorConfig<T, ID>) {
   const { ipc, error } = useIpcConnection();
 
   if (error) return <Text color="red">✖ {error}</Text>;

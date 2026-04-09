@@ -1,1 +1,1 @@
-export const description = "频道管理";
+export const description = "频道（服务器）管理";

@@ -98,3 +98,61 @@ export function MemberSelector({ gid, onSelect }: { gid: number; onSelect: (uid:
     />
   );
 }
+
+// ── Guild ──
+
+type GuildItem = {
+  guild_id: string;
+  guild_name: string;
+};
+
+export function GuildSelector({ onSelect }: { onSelect: (guildId: string) => void }) {
+  return (
+    <ListSelector<GuildItem, string>
+      action={Actions.GUILD_LIST}
+      title="选择频道"
+      loadingLabel="加载频道列表…"
+      emptyLabel="无匹配频道"
+      getId={(g) => g.guild_id}
+      getFilterTexts={(g) => [g.guild_name, g.guild_id]}
+      renderItem={(g, selected) => (
+        <>
+          {selected ? <Text color="yellow">❯ </Text> : <Text>  </Text>}
+          <Text bold>{g.guild_name}</Text>
+          <Text dimColor> ({g.guild_id})</Text>
+        </>
+      )}
+      onSelect={onSelect}
+    />
+  );
+}
+
+// ── Channel ──
+
+type ChannelItem = {
+  channel_id: string;
+  channel_name: string;
+  channel_type: number;
+};
+
+export function ChannelSelector({ guildId, onSelect }: { guildId: string; onSelect: (channelId: string) => void }) {
+  return (
+    <ListSelector<ChannelItem, string>
+      action={Actions.GUILD_CHANNELS}
+      params={{ guild_id: guildId }}
+      title="选择子频道"
+      loadingLabel="加载子频道列表…"
+      emptyLabel="无匹配子频道"
+      getId={(c) => c.channel_id}
+      getFilterTexts={(c) => [c.channel_name, c.channel_id]}
+      renderItem={(c, selected) => (
+        <>
+          {selected ? <Text color="yellow">❯ </Text> : <Text>  </Text>}
+          <Text bold>{c.channel_name}</Text>
+          <Text dimColor> ({c.channel_id})</Text>
+        </>
+      )}
+      onSelect={onSelect}
+    />
+  );
+}

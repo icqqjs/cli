@@ -10,8 +10,8 @@ import { getSocketPath } from "@/lib/paths.js";
 import { sendNotification } from "@/lib/notify.js";
 
 type Subscription = {
-  type: "group" | "private";
-  id: number;
+  type: "group" | "private" | "guild";
+  id: number | string;
   reqId: string;
 };
 
@@ -131,6 +131,40 @@ export class DaemonServer {
         }
       }
     });
+
+    // Guild (channel) message forwarding
+    this.client.on("message.guild" as any, (event: any) => {
+      const channelId = event.channel_id as string;
+      const eventData = {
+        type: "guild" as const,
+        guild_id: event.guild_id as string,
+        guild_name: event.guild_name as string,
+        channel_id: channelId,
+        channel_name: event.channel_name as string,
+        nickname: event.sender?.nickname ?? "",
+        tiny_id: event.sender?.tiny_id ?? "",
+        raw_message: event.raw_message ?? "",
+        time: event.time ?? Math.floor(Date.now() / 1000),
+        seq: event.seq,
+      };
+
+      void this.pushWebhook({ event: "message", data: eventData });
+
+      for (const [socketId, subs] of this.subscriptions.entries()) {
+        for (const sub of subs) {
+          if (sub.type === "guild" && sub.id === channelId) {
+            const socket = this.sockets.get(socketId);
+            if (socket && !socket.destroyed) {
+              this.sendToSocket(socket, {
+                id: sub.reqId,
+                event: "message",
+                data: eventData,
+              });
+            }
+          }
+        }
+      }
+    });
   }
 
   private sendToSocket(socket: net.Socket, msg: IpcMessage) {
@@ -191,8 +225,8 @@ export class DaemonServer {
     req: IpcRequest,
   ) {
     if (req.action === Actions.SUBSCRIBE) {
-      const type = req.params.type as "group" | "private";
-      const id = Number(req.params.id);
+      const type = req.params.type as "group" | "private" | "guild";
+      const id = type === "guild" ? String(req.params.id) : Number(req.params.id);
       const subs = this.subscriptions.get(socketId) ?? [];
       subs.push({ type, id, reqId: req.id });
       this.subscriptions.set(socketId, subs);
@@ -205,8 +239,8 @@ export class DaemonServer {
     }
 
     if (req.action === Actions.UNSUBSCRIBE) {
-      const type = req.params.type as "group" | "private";
-      const id = Number(req.params.id);
+      const type = req.params.type as "group" | "private" | "guild";
+      const id = type === "guild" ? String(req.params.id) : Number(req.params.id);
       const subs = this.subscriptions.get(socketId) ?? [];
       this.subscriptions.set(
         socketId,

@@ -1,0 +1,150 @@
+import React, { useState, useEffect } from "react";
+import { Text, Box, useInput } from "ink";
+import type { IpcClient } from "@/lib/ipc-client.js";
+import type { IpcEvent } from "@/daemon/protocol.js";
+import { Actions } from "@/daemon/protocol.js";
+import { useEmojiMode } from "./chat/useEmojiMode.js";
+
+type Message = {
+  nickname: string;
+  content: string;
+  time: number;
+};
+
+type Mode = "chat" | "emoji";
+
+type Props = {
+  ipc: IpcClient;
+  guildId: string;
+  channelId: string;
+  channelName?: string;
+};
+
+function formatTime(ts: number): string {
+  return new Date(ts * 1000).toLocaleTimeString("zh-CN", { hour12: false });
+}
+
+export function ChannelChatSession({ ipc, guildId, channelId, channelName }: Props) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [mode, setMode] = useState<Mode>("chat");
+  const [showHelp, setShowHelp] = useState(true);
+
+  // Subscribe to guild channel messages
+  useEffect(() => {
+    const sub = ipc.subscribe(
+      Actions.SUBSCRIBE,
+      { type: "guild", id: channelId },
+      (event: IpcEvent) => {
+        if (event.event === "message") {
+          const data = event.data as any;
+          setMessages((prev) => [
+            ...prev.slice(-100),
+            { nickname: data.nickname, content: data.raw_message, time: data.time },
+          ]);
+          setShowHelp(false);
+        }
+      },
+    );
+    return () => { void sub.unsubscribe(); };
+  }, [ipc, channelId]);
+
+  const emoji = useEmojiMode();
+
+  const sendMessage = async (text: string) => {
+    setSending(true);
+    try {
+      await ipc.request(Actions.GUILD_SEND_MSG, {
+        guild_id: guildId,
+        channel_id: channelId,
+        message: text,
+      });
+      setMessages((prev) => [
+        ...prev.slice(-100),
+        { nickname: "我", content: text, time: Math.floor(Date.now() / 1000) },
+      ]);
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        { nickname: "系统", content: `发送失败: ${e instanceof Error ? e.message : String(e)}`, time: Math.floor(Date.now() / 1000) },
+      ]);
+    }
+    setSending(false);
+  };
+
+  useInput((char, key) => {
+    if (mode === "emoji") {
+      const result = emoji.handleKey(char, key);
+      if (result === "exit") { setMode("chat"); return; }
+      if (typeof result === "string") {
+        setInput((prev) => prev + result);
+        setMode("chat");
+      }
+      return;
+    }
+
+    // Chat mode
+    if (key.ctrl && char === "h") { setShowHelp((v) => !v); return; }
+    if (key.ctrl && char === "c") { process.exit(0); }
+    if (key.tab) { setMode("emoji"); return; }
+
+    if (key.return) {
+      const text = input.trim();
+      if (text) {
+        void sendMessage(text);
+        setInput("");
+      }
+      return;
+    }
+
+    if (key.backspace || key.delete) {
+      setInput((prev) => prev.slice(0, -1));
+      return;
+    }
+
+    if (char && !key.ctrl && !key.meta) {
+      setInput((prev) => prev + char);
+    }
+  });
+
+  const label = channelName ? `#${channelName}` : channelId;
+
+  return (
+    <Box flexDirection="column">
+      {showHelp && mode === "chat" && (
+        <Box borderStyle="round" borderColor="gray" paddingX={1} flexDirection="column">
+          <Text bold color="cyan">子频道聊天 - {label}</Text>
+          <Text dimColor>Enter 发送 | Tab 表情 | Ctrl+C 退出 | Ctrl+H 切换帮助</Text>
+          <Text dimColor>暂仅支持发送文本、AT、表情</Text>
+        </Box>
+      )}
+
+      <Box flexDirection="column" marginTop={showHelp ? 0 : 1}>
+        {messages.slice(-20).map((msg, i) => (
+          <Text key={i}>
+            <Text dimColor>[{formatTime(msg.time)}]</Text>
+            {" "}
+            <Text bold color={msg.nickname === "我" ? "green" : msg.nickname === "系统" ? "red" : "blue"}>
+              {msg.nickname}
+            </Text>
+            : {msg.content}
+          </Text>
+        ))}
+      </Box>
+
+      <Box marginTop={1}>
+        {mode === "emoji" ? (
+          emoji.render()
+        ) : (
+          <Text>
+            <Text color="cyan" bold>{sending ? "发送中…" : `${label}>`}</Text>
+            {" "}
+            {input}
+            <Text color="cyan">█</Text>
+          </Text>
+        )}
+      </Box>
+    </Box>
+  );
+}

@@ -66,7 +66,7 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq login -r` | 使用已保存 token 快速重连 |
 | `icqq status` | 查看所有守护进程状态 |
 | `icqq stop` | 停止守护进程 |
-| `icqq switch [qq]` | 切换当前操作的账号 |
+| `icqq switch [uin]` | 切换当前操作的账号 |
 | `icqq profile` | 查看个人资料 |
 | `icqq requests` | 查看待处理的好友/群请求 |
 
@@ -238,13 +238,14 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | 命令 | 说明 |
 |------|------|
 | `icqq guild list` | 频道列表 |
-| `icqq guild info` | 频道信息 |
-| `icqq guild channels` | 子频道列表 |
-| `icqq guild members` | 频道成员列表 |
-| `icqq guild send` | 发送频道消息 |
-| `icqq guild recall` | 撤回频道消息 |
-| `icqq guild share` | 分享频道帖子 |
-| `icqq guild forum-url` | 获取论坛 URL |
+| `icqq guild info <guild_id>` | 查看频道信息 |
+| `icqq guild members <guild_id>` | 频道成员列表 |
+| `icqq guild channel list <guild_id>` | 子频道列表 |
+| `icqq guild channel send <guild_id> <channel_id> <message>` | 发送子频道消息 |
+| `icqq guild channel chat <guild_id> <channel_id>` | 进入子频道聊天模式 |
+| `icqq guild channel recall <guild_id> <channel_id> <seq>` | 撤回子频道消息 |
+| `icqq guild channel share <guild_id> <channel_id> <url> <title>` | 发送互联分享 |
+| `icqq guild channel forum-url <guild_id> <channel_id> <forum_id>` | 获取帖子 URL |
 
 ## 架构
 
