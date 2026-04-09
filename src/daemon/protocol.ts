@@ -46,8 +46,6 @@ export const Actions = {
   GET_MSG: "get_msg",
   HISTORY_PRIVATE: "history_private",
   HISTORY_GROUP: "history_group",
-  GET_PRIVATE_MSG_HISTORY: "history_private",
-  GET_GROUP_MSG_HISTORY: "history_group",
   MARK_READ: "mark_read",
   DELETE_MSG: "delete_msg",
 
@@ -70,7 +68,6 @@ export const Actions = {
 
   // 群管理
   GROUP_MUTE: "group_mute",
-  GROUP_MUTE_MEMBER: "group_mute",
   GROUP_MUTE_ALL: "group_mute_all",
   GROUP_KICK: "group_kick",
   GROUP_QUIT: "group_quit",
@@ -80,8 +77,6 @@ export const Actions = {
   GROUP_SIGN: "group_sign",
   GROUP_ESSENCE_ADD: "group_essence_add",
   GROUP_ESSENCE_REMOVE: "group_essence_remove",
-  GROUP_SET_ESSENCE: "group_essence_add",
-  GROUP_REMOVE_ESSENCE: "group_essence_remove",
   GROUP_ALLOW_ANONY: "group_allow_anony",
   GROUP_MUTED_LIST: "group_muted_list",
   GROUP_AT_ALL_REMAIN: "group_at_all_remain",
@@ -91,7 +86,6 @@ export const Actions = {
   FRIEND_LIKE: "friend_like",
   FRIEND_DELETE: "friend_delete",
   FRIEND_REMARK: "friend_remark",
-  FRIEND_SET_REMARK: "friend_remark",
   FRIEND_CLASS: "friend_class",
 
   // 系统消息/请求
@@ -111,11 +105,90 @@ export const Actions = {
   GFS_DELETE: "gfs_delete",
   GFS_RENAME: "gfs_rename",
   GFS_STAT: "gfs_stat",
+  GFS_MOVE: "gfs_move",
+  GFS_DOWNLOAD: "gfs_download",
 
   // 其他功能
   IMAGE_OCR: "image_ocr",
   RELOAD_FRIEND_LIST: "reload_friend_list",
   RELOAD_GROUP_LIST: "reload_group_list",
+  CLEAN_CACHE: "clean_cache",
+  GET_GROUP_SHARE: "get_group_share",
+
+  // 群管理扩展
+  GROUP_SET_JOIN_TYPE: "group_set_join_type",
+  GROUP_SET_RATE_LIMIT: "group_set_rate_limit",
+  GROUP_MUTE_ANONY: "group_mute_anony",
+  GROUP_ANON_INFO: "group_anon_info",
+
+  // 好友操作扩展
+  ADD_FRIEND: "add_friend",
+  SEND_TEMP_MSG: "send_temp_msg",
+
+  // 漫游表情
+  GET_ROAMING_STAMP: "get_roaming_stamp",
+  DELETE_STAMP: "delete_stamp",
+
+  // 好友文件操作
+  FRIEND_RECALL_FILE: "friend_recall_file",
+
+  // 群文件上传
+  GFS_UPLOAD: "gfs_upload",
+
+  // 群消息表态
+  GROUP_SET_REACTION: "group_set_reaction",
+  GROUP_DEL_REACTION: "group_del_reaction",
+
+  // 转发消息
+  GET_FORWARD_MSG: "get_forward_msg",
+  MAKE_FORWARD_MSG: "make_forward_msg",
+
+  // 频道系统
+  GUILD_LIST: "guild_list",
+  GUILD_INFO: "guild_info",
+  GUILD_CHANNELS: "guild_channels",
+  GUILD_MEMBERS: "guild_members",
+  GUILD_SEND_MSG: "guild_send_msg",
+  GUILD_RECALL_MSG: "guild_recall_msg",
+
+  // 用户文件操作
+  GET_FILE_INFO: "get_file_info",
+  GET_FILE_URL: "get_file_url",
+  GET_AVATAR_URL: "get_avatar_url",
+  GET_GROUP_AVATAR_URL: "get_group_avatar_url",
+
+  // 屏蔽群成员消息
+  SET_SCREEN_MEMBER_MSG: "set_screen_member_msg",
+
+  // 群文件转发
+  GFS_FORWARD: "gfs_forward",
+  GFS_FORWARD_OFFLINE: "gfs_forward_offline",
+
+  // 重载列表
+  RELOAD_BLACKLIST: "reload_blacklist",
+  RELOAD_STRANGER_LIST: "reload_stranger_list",
+
+  // 在线状态查询
+  GET_STATUS_INFO: "get_status_info",
+
+  // 密钥/工具
+  GET_CLIENT_KEY: "get_client_key",
+  GET_PSKEY: "get_pskey",
+  UID2UIN: "uid2uin",
+  UIN2UID: "uin2uid",
+
+  // 视频/图片/语音 URL
+  GET_VIDEO_URL: "get_video_url",
+  GET_ADD_FRIEND_SETTING: "get_add_friend_setting",
+
+  // 频道扩展
+  RELOAD_GUILDS: "reload_guilds",
+  GET_FORUM_URL: "get_forum_url",
+  GUILD_CHANNEL_SHARE: "guild_channel_share",
+
+  // 获取图片/语音 URL (Contactable)
+  GET_PIC_URL: "get_pic_url",
+  GET_PTT_URL: "get_ptt_url",
 
   // 订阅
   SUBSCRIBE: "subscribe",

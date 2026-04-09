@@ -4,11 +4,11 @@ import { argument } from "pastel";
 import { IpcMutate } from "@/components/IpcCommand.js";
 import { Actions } from "@/daemon/protocol.js";
 
-export const description = "发送私聊消息";
+export const description = "发送私聊消息（同 icqq send private <qq> <message>）";
 
 export const args = zod.tuple([
   zod.number().describe(
-    argument({ name: "uid", description: "好友QQ号" }),
+    argument({ name: "qq", description: "好友QQ号" }),
   ),
   zod.string().describe(
     argument({ name: "message", description: "消息内容" }),

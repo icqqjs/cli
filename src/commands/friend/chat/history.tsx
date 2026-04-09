@@ -20,7 +20,7 @@ type Props = { args: zod.infer<typeof args>; options: zod.infer<typeof options> 
 export default function HistoryPrivate({ args: [uid], options: { count } }: Props) {
   return (
     <IpcCommand
-      action={Actions.GET_PRIVATE_MSG_HISTORY}
+      action={Actions.HISTORY_PRIVATE}
       params={{ user_id: uid, count }}
       loadingText="获取消息记录…"
       render={(data: any[]) => (

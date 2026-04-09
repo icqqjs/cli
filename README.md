@@ -81,8 +81,11 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 
 | 命令 | 说明 |
 |------|------|
-| `icqq friend send <qq> <message>` | 发送私聊消息 |
-| `icqq group send <gid> <message>` | 发送群消息 |
+| `icqq send private <qq> <message>` | 发送私聊消息 |
+| `icqq send group <gid> <message>` | 发送群消息 |
+| `icqq send temp <qq> <message> -g <gid>` | 发送临时消息 |
+| `icqq friend send <qq> <message>` | 发送私聊消息（兼容旧格式） |
+| `icqq group send <gid> <message>` | 发送群消息（兼容旧格式） |
 | `icqq friend chat <qq>` | 进入好友交互聊天 |
 | `icqq group chat <gid>` | 进入群交互聊天 |
 | `icqq friend chat history <qq>` | 查看好友聊天记录 |
@@ -106,7 +109,6 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 |------|------|
 | `icqq friend list` | 好友列表 |
 | `icqq friend view <qq>` | 查看好友资料 |
-| `icqq friend send <qq> <message>` | 发送私聊消息 |
 | `icqq friend delete <qq>` | 删除好友 |
 | `icqq friend like <qq>` | 点赞 |
 | `icqq friend poke <qq>` | 戳一戳 |
@@ -118,7 +120,6 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 |------|------|
 | `icqq group list` | 群列表 |
 | `icqq group view <gid>` | 查看群信息 |
-| `icqq group send <gid> <message>` | 发送群消息 |
 | `icqq group member list <gid>` | 群成员列表 |
 | `icqq group member view <gid> <qq>` | 查看群成员资料 |
 | `icqq group invite <gid> <qq>` | 邀请入群 |
