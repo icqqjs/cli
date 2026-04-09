@@ -38,6 +38,7 @@ export function ChatSession({ ipc, type, id }: Props) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [mode, setMode] = useState<Mode>("chat");
+  const [showHelp, setShowHelp] = useState(true);
 
   // ── Group members (for @ autocomplete) ──
   const [members, setMembers] = useState<MemberInfo[]>([]);
@@ -71,6 +72,7 @@ export function ChatSession({ ipc, type, id }: Props) {
             ...prev.slice(-100),
             { nickname: data.nickname, content: data.raw_message, time: data.time },
           ]);
+          setShowHelp(false); // 收到消息后自动隐藏帮助
         }
       },
     );
@@ -166,11 +168,11 @@ export function ChatSession({ ipc, type, id }: Props) {
     if (key.ctrl && char === "g" && type === "group") { setMode("at"); at.reset(); return; }
     if (key.ctrl && char === "y") { setMode("emoji"); emoji.reset(); return; }
     if (key.ctrl && char === "o") { setMode("file"); file.reset(); return; }
+    if (key.ctrl && char === "h") { setShowHelp((v) => !v); return; }
     if (char && !key.ctrl && !key.meta) { setInput((prev) => prev + char); }
   });
 
   // ── Render ──
-  const isFirstRender = messages.length === 0 && mode === "chat";
 
   return (
     <Box flexDirection="column">
@@ -178,12 +180,13 @@ export function ChatSession({ ipc, type, id }: Props) {
         ━━ {type === "group" ? "群聊" : "私聊"} ({id}) ━━
       </Text>
 
-      {isFirstRender && (
+      {showHelp && mode === "chat" && (
         <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1}>
           <Text dimColor>快捷键:</Text>
           {type === "group" && <Text dimColor>  Ctrl+G  @成员提及</Text>}
           <Text dimColor>  Ctrl+Y  表情选择器</Text>
           <Text dimColor>  Ctrl+O  发送文件</Text>
+          <Text dimColor>  Ctrl+H  切换帮助</Text>
           <Text dimColor>  Ctrl+C  退出聊天</Text>
         </Box>
       )}
