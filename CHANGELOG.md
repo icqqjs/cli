@@ -1,5 +1,45 @@
 # Changelog
 
+## [1.1.0](https://github.com/icqqjs/cli/compare/v1.0.1...v1.1.0) (2026-04-09)
+
+
+### Features
+
+* add completion command for shell auto-completion scripts ([e5b5eed](https://github.com/icqqjs/cli/commit/e5b5eedb6a67700bff894ccab43aaf5f9c6f6eaa))
+* add config get and set commands for managing configuration ([05a37a9](https://github.com/icqqjs/cli/commit/05a37a9902b138ce786cbd3566123a5335307cb1))
+* add GET_PIC_URL and GET_PTT_URL handlers ([d8ca9a7](https://github.com/icqqjs/cli/commit/d8ca9a79990895532d4a16f78dc57392c1481978))
+* add JSON mode utility for output formatting ([e5b5eed](https://github.com/icqqjs/cli/commit/e5b5eedb6a67700bff894ccab43aaf5f9c6f6eaa))
+* add missing apis ([8304994](https://github.com/icqqjs/cli/commit/8304994a89c441c0b36a9dd79bce5830372e4a4e))
+* add system notification support and file transfer actions ([00d4644](https://github.com/icqqjs/cli/commit/00d4644c8105eba78ad08f06ffd58e215d25a3dd))
+* create switch command for changing active account ([e5b5eed](https://github.com/icqqjs/cli/commit/e5b5eedb6a67700bff894ccab43aaf5f9c6f6eaa))
+* enhance status command to display all instances and their statuses ([05a37a9](https://github.com/icqqjs/cli/commit/05a37a9902b138ce786cbd3566123a5335307cb1))
+* implement chat modes for [@mentions](https://github.com/mentions), emojis, and file selection ([e5b5eed](https://github.com/icqqjs/cli/commit/e5b5eedb6a67700bff894ccab43aaf5f9c6f6eaa))
+* introduce friend and group message sending commands ([05a37a9](https://github.com/icqqjs/cli/commit/05a37a9902b138ce786cbd3566123a5335307cb1))
+* introduce ListSelector component for displaying selectable lists ([e5b5eed](https://github.com/icqqjs/cli/commit/e5b5eedb6a67700bff894ccab43aaf5f9c6f6eaa))
+* restore friend/send and group/send as backwards-compat aliases ([03b95e4](https://github.com/icqqjs/cli/commit/03b95e4ed5a0097183b66596ce5d118b9002b9b9))
+* 新增 19 个缺失 API 命令 ([4858586](https://github.com/icqqjs/cli/commit/4858586ce40ef39adb8bb5c99a2597c6a426a2f6))
+* 新增 P0 直通型命令 (stranger/view, msg/get, msg/mark-read, group/set/anonymous, group/muted-list, group/at-all-remain, friend/class/*, reload/*) ([ed0ceb8](https://github.com/icqqjs/cli/commit/ed0ceb86e63e1c2a85470e693fb57e34946c8bba))
+* 新增 P1 简单型命令 (gfs/move,download,stat, group/set/join-type,rate-limit, group/mute-anon,anon-info,share, friend/add, cache/clean, stamp/*, send temp) 及对应 handler ([c0cd25c](https://github.com/icqqjs/cli/commit/c0cd25cec753779261d03f4c255913e093e39ad1))
+* 新增 P2 中等型命令 (friend/send-file,recall-file, gfs/upload, group/reaction/add,remove, forward/get) 及对应 handler ([d11150d](https://github.com/icqqjs/cli/commit/d11150db86f765b71d5497ba1bcac9518f9e20f8))
+* 新增 P3 频道系统命令 (guild/list,info,channels,members,send,recall) 及对应 handler ([718e4c1](https://github.com/icqqjs/cli/commit/718e4c102936adbe7da7b686e57729cc461030e3))
+* 添加 skills 子模块 ([54b593d](https://github.com/icqqjs/cli/commit/54b593dfc36123e1822af106392b104ff081d542))
+* 添加多个命令描述，优化黑名单和Webhook配置的实现 ([f0c3dfa](https://github.com/icqqjs/cli/commit/f0c3dfafaaee8b61c74f1c3771c97e98843ed044))
+
+
+### Bug Fixes
+
+* address code review issues in protocol.ts and handlers.ts ([9427636](https://github.com/icqqjs/cli/commit/94276365ec8a2765e714317726f1307a1fb5aa4d))
+* correct environment variable for installation token in CI workflow ([89b22a5](https://github.com/icqqjs/cli/commit/89b22a525c94f9311cc79b53a47abada735a929e))
+* GFS info 命令使用错误的 Action (GFS_STAT → GFS_INFO) 并修正字段名 ([cf445f7](https://github.com/icqqjs/cli/commit/cf445f79bcbe0c124e82cdb0438024a26372c1b8))
+* improve error messages and loading indicators across commands ([05a37a9](https://github.com/icqqjs/cli/commit/05a37a9902b138ce786cbd3566123a5335307cb1))
+* remove duplicate Action definitions in protocol.ts ([1e5c6ff](https://github.com/icqqjs/cli/commit/1e5c6ff5820a9fe22fd1fa5afeca7904b8c30f59))
+* scripts.prepublishOnly ([56f57c2](https://github.com/icqqjs/cli/commit/56f57c231ee33f63494444e0becd452045b79cd8))
+* update command files to use correct Action names after alias removal ([cb07dbf](https://github.com/icqqjs/cli/commit/cb07dbf6a2f4725c615026374081ed4bc157f5ff))
+* use !== undefined check for duration in GROUP_MUTE_ANONY handler ([42bf250](https://github.com/icqqjs/cli/commit/42bf25026e48b9bd1107a5544d8d428d0b06c08e))
+* 更新子项目提交状态 ([8fe3ca4](https://github.com/icqqjs/cli/commit/8fe3ca4a60afc527c753065ef7660c2abb391ad9))
+* 更新子项目提交状态为 dirty ([c205043](https://github.com/icqqjs/cli/commit/c205043cb3c863b73fce1af6553bef3265136d23))
+* 更新鉴权流程 ([1ec2027](https://github.com/icqqjs/cli/commit/1ec20275dcb014a909040ea29a37fe80f6484741))
+
 ## [1.0.1](https://github.com/icqqjs/cli/compare/v1.0.0...v1.0.1) (2026-04-08)
 
 
