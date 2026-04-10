@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/icqqjs/cli/compare/v1.4.1...v1.4.2) (2026-04-09)
+
+
+### Bug Fixes
+
+* 增强安装流程，支持检测并使用不同的包管理器，新增获取 icqq 安装路径功能 ([66b1f02](https://github.com/icqqjs/cli/commit/66b1f029b8d5071ba8f7c6d9aeb84b42c5701729))
+
 ## [1.4.1](https://github.com/icqqjs/cli/compare/v1.4.0...v1.4.1) (2026-04-09)
 
 
