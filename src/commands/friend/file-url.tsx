@@ -4,6 +4,7 @@ import zod from "zod";
 import { argument } from "pastel";
 import { IpcCommand } from "@/components/IpcCommand.js";
 import { Actions } from "@/daemon/protocol.js";
+import { termLink } from "@/lib/parse-message.js";
 
 export const description = "获取私聊文件下载链接";
 
@@ -23,7 +24,7 @@ export default function FileUrl({ args: [uid, fid] }: Props) {
     <IpcCommand
       action={Actions.GET_FILE_URL}
       params={{ user_id: uid, fid }}
-      render={(url: string) => <Text>下载地址: {url}</Text>}
+      render={(data: any) => <Text>下载地址: {termLink(data.url ?? String(data), data.url ?? String(data))}</Text>}
     />
   );
 }

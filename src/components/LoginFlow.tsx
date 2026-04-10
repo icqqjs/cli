@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Text, Box, useInput } from "ink";
 import type { Client } from "@icqqjs/icqq";
 import { Spinner } from "./Spinner.js";
+import { termLink } from "@/lib/parse-message.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -236,7 +237,7 @@ export function LoginFlow({
           </Text>
           <Text>
             请在浏览器打开:{" "}
-            <Text color="cyan">{verifyUrl}</Text>
+            <Text color="cyan">{termLink(verifyUrl, verifyUrl)}</Text>
           </Text>
           <Text>
             完成验证后取出 ticket（若需 randStr 用英文逗号隔开）
@@ -259,7 +260,7 @@ export function LoginFlow({
           {devicePhone && <Text>密保手机: {devicePhone}</Text>}
           <Text>
             验证链接:{" "}
-            <Text color="cyan">{verifyUrl}</Text>
+            <Text color="cyan">{termLink(verifyUrl, verifyUrl)}</Text>
           </Text>
           {inputMode === "confirm" && (
             <Box flexDirection="column" marginTop={1}>
@@ -294,7 +295,7 @@ export function LoginFlow({
           </Text>
           <Text>
             请在浏览器打开:{" "}
-            <Text color="cyan">{verifyUrl}</Text>
+            <Text color="cyan">{termLink(verifyUrl, verifyUrl)}</Text>
           </Text>
           <Box marginTop={1}>
             <Text color="green">完成验证后按回车: </Text>

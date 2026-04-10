@@ -7,6 +7,7 @@ export interface NotifyOptions {
   title: string;
   body: string;
   subtitle?: string;
+  sound?: boolean;
 }
 
 /**
@@ -29,31 +30,38 @@ export function sendNotification(opts: NotifyOptions): void {
   }
 }
 
-function notifyMacOS({ title, body, subtitle }: NotifyOptions) {
+function notifyMacOS({ title, body, subtitle, sound }: NotifyOptions) {
   // Use osascript — available on all macOS without extra installs
   let script = `display notification ${escapeAppleScript(body)} with title ${escapeAppleScript(title)}`;
   if (subtitle) {
     script += ` subtitle ${escapeAppleScript(subtitle)}`;
   }
+  if (sound !== false) {
+    script += ` sound name "default"`;
+  }
   execFile("osascript", ["-e", script], silentCallback);
 }
 
-function notifyLinux({ title, body }: NotifyOptions) {
+function notifyLinux({ title, body, subtitle }: NotifyOptions) {
   // notify-send from libnotify — available on most Linux desktops
-  execFile("notify-send", [title, body, "--app-name=icqq"], silentCallback);
+  const fullBody = subtitle ? `<b>${escapeXml(subtitle)}</b>\n${body}` : body;
+  execFile("notify-send", [title, fullBody, "--app-name=icqq"], silentCallback);
 }
 
-function notifyWindows({ title, body }: NotifyOptions) {
+function notifyWindows({ title, body, subtitle }: NotifyOptions) {
   // PowerShell toast notification — works on Windows 10+
+  const line2 = subtitle ? escapeXml(subtitle) : "";
+  const line3 = escapeXml(body);
   const ps = `
     [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
     [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
     $xml = @"
     <toast>
       <visual>
-        <binding template="ToastText02">
-          <text id="1">${escapeXml(title)}</text>
-          <text id="2">${escapeXml(body)}</text>
+        <binding template="ToastGeneric">
+          <text>${escapeXml(title)}</text>
+          <text>${line2}</text>
+          <text>${line3}</text>
         </binding>
       </visual>
     </toast>

@@ -4,7 +4,7 @@ import type { Client } from "@icqqjs/icqq";
 import type { IpcRequest, IpcMessage } from "./protocol.js";
 import { Actions } from "./protocol.js";
 import { handleRequest } from "./handlers.js";
-import { stringifyMessage } from "@/lib/parse-message.js";
+import { stringifyMessage, renderDisplayMessage } from "@/lib/parse-message.js";
 import { loadConfig, saveConfig } from "@/lib/config.js";
 import { getSocketPath } from "@/lib/paths.js";
 import { sendNotification } from "@/lib/notify.js";
@@ -97,7 +97,7 @@ export class DaemonServer {
       // Push system notification
       if (this.notifyEnabled) {
         const sender = eventData.nickname;
-        const body = eventData.raw_message;
+        const body = renderDisplayMessage(eventData.raw_message);
         if (msgType === "group") {
           const groupName =
             this.client.gl.get(targetId)?.group_name ?? String(targetId);
@@ -163,6 +163,29 @@ export class DaemonServer {
             }
           }
         }
+      }
+    });
+
+    // ── 账号状态变更通知 ──
+    this.client.on("system.online", () => {
+      void this.pushWebhook({ event: "system.online", data: { uin: this.client.uin } });
+      if (this.notifyEnabled) {
+        sendNotification({ title: "icqq", body: `账号 ${this.client.uin} 已上线` });
+      }
+    });
+
+    this.client.on("system.offline" as any, (event: any) => {
+      const reason = event?.message ?? "未知原因";
+      void this.pushWebhook({ event: "system.offline", data: { uin: this.client.uin, reason } });
+      if (this.notifyEnabled) {
+        sendNotification({ title: "icqq · 账号离线", body: `${this.client.uin} 已离线: ${reason}` });
+      }
+    });
+
+    this.client.on("system.login.error" as any, (event: any) => {
+      const message = event?.message ?? "登录异常";
+      if (this.notifyEnabled) {
+        sendNotification({ title: "icqq · 登录异常", body: `${this.client.uin}: ${message}` });
       }
     });
   }

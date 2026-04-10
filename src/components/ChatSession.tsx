@@ -6,6 +6,7 @@ import { Actions } from "@/daemon/protocol.js";
 import { useAtMode } from "./chat/useAtMode.js";
 import { useEmojiMode } from "./chat/useEmojiMode.js";
 import { useFileMode, tagColor, tagLabel } from "./chat/useFileMode.js";
+import { renderDisplayMessage } from "@/lib/parse-message.js";
 
 type Message = {
   nickname: string;
@@ -195,7 +196,7 @@ export function ChatSession({ ipc, type, id }: Props) {
         {messages.map((msg, i) => (
           <Text key={i}>
             <Text dimColor>[{formatTime(msg.time)}]</Text>{" "}
-            <Text bold>{msg.nickname}</Text>: {msg.content}
+            <Text bold>{msg.nickname}</Text>: {renderDisplayMessage(msg.content)}
           </Text>
         ))}
       </Box>

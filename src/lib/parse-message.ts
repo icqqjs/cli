@@ -16,8 +16,71 @@
 import type { MessageElem } from "@icqqjs/icqq";
 import fs from "node:fs";
 import path from "node:path";
+import { FACE_MAP } from "../components/chat/useEmojiMode.js";
 
 const TAG_RE = /\[(face|image|at|dice|rps)(?::([^\]]*))?\]/g;
+
+// ── Face ID → Emoji lookup ──
+const FACE_EMOJI_MAP = new Map<number, string>();
+for (const [id, name] of FACE_MAP) {
+  const emoji = name.split(" ")[0];
+  FACE_EMOJI_MAP.set(id, emoji);
+}
+
+const DISPLAY_RE = /\[(face|image|flash|record|video|bface|share|poke|json|xml|file|dice|rps|markdown)(?::([^\]]*))?\]/g;
+
+/** 生成 OSC 8 终端超链接（支持 iTerm2/Kitty/WezTerm/Windows Terminal 等） */
+export function termLink(label: string, url: string): string {
+  return `\x1b]8;;${url}\x07${label}\x1b]8;;\x07`;
+}
+
+/** 若 value 是 HTTP(S) URL 则包裹为可点击超链接，否则返回纯文本 */
+function linkIfUrl(label: string, value: string | undefined): string {
+  if (value && /^https?:\/\//.test(value)) {
+    return termLink(label, value);
+  }
+  return label;
+}
+
+/** 将 CQ 码文本转换为可读的显示文本（表情转 emoji，多媒体转可点击超链接等） */
+export function renderDisplayMessage(raw: string): string {
+  return raw.replace(DISPLAY_RE, (_match, tag: string, value: string) => {
+    switch (tag) {
+      case "face": {
+        const id = Number(value);
+        return FACE_EMOJI_MAP.get(id) ?? `[表情${id}]`;
+      }
+      case "image":
+        return linkIfUrl("[图片]", value);
+      case "flash":
+        return linkIfUrl("[闪照]", value);
+      case "record":
+        return linkIfUrl("[语音]", value);
+      case "video":
+        return linkIfUrl("[视频]", value);
+      case "dice":
+        return "[骰子·不支持查看]";
+      case "rps":
+        return "[猜拳·不支持查看]";
+      case "bface":
+        return value ? `[${value}]` : "[表情]";
+      case "share":
+        return linkIfUrl("[分享]", value);
+      case "poke":
+        return "[戳一戳]";
+      case "json":
+        return "[卡片消息·不支持查看]";
+      case "xml":
+        return "[XML消息·不支持查看]";
+      case "file":
+        return `[文件:${value}]`;
+      case "markdown":
+        return "[Markdown·不支持查看]";
+      default:
+        return _match;
+    }
+  });
+}
 
 /** Check if a string is a local file path (not a URL or base64) */
 function isLocalPath(str: string): boolean {

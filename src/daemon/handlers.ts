@@ -32,10 +32,17 @@ function requireString(p: Record<string, unknown>, key: string): string {
   if (typeof v !== "string" || !v) throw new Error(`缺少参数: ${key}`);
   return v;
 }
-/** Validate file path: must be a non-empty string, no path traversal */
+/** Validate file path: must be a non-empty string, no null bytes or path traversal */
 function safeFilePath(p: Record<string, unknown>, key = "file"): string {
   const v = requireString(p, key);
-  if (v.includes("\0")) throw new Error("无效的文件路径");
+  if (v.includes("\0") || v.includes("..")) throw new Error("无效的文件路径");
+  return v;
+}
+/** Extract an optional string param (returns undefined if missing, throws if wrong type) */
+function optionalString(p: Record<string, unknown>, key: string): string | undefined {
+  const v = p[key];
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== "string") throw new Error(`参数 ${key} 类型错误，应为字符串`);
   return v;
 }
 
@@ -185,23 +192,25 @@ const handlers: Record<string, Handler> = {
 
   // ── 个人设置 ──
   [Actions.SET_NICKNAME]: async (client, params) => {
-    return await client.setNickname(params.nickname as string);
+    return await client.setNickname(requireString(params, "nickname"));
   },
 
   [Actions.SET_GENDER]: async (client, params) => {
-    return await client.setGender(Number(params.gender) as 0 | 1 | 2);
+    const g = Number(params.gender);
+    if (![0, 1, 2].includes(g)) throw new Error("gender 须为 0|1|2");
+    return await client.setGender(g as 0 | 1 | 2);
   },
 
   [Actions.SET_BIRTHDAY]: async (client, params) => {
-    return await client.setBirthday(params.birthday as string);
+    return await client.setBirthday(requireString(params, "birthday"));
   },
 
   [Actions.SET_SIGNATURE]: async (client, params) => {
-    return await client.setSignature(params.signature as string);
+    return await client.setSignature(requireString(params, "signature"));
   },
 
   [Actions.SET_DESCRIPTION]: async (client, params) => {
-    return await client.setDescription(params.description as string);
+    return await client.setDescription(requireString(params, "description"));
   },
 
   [Actions.SET_AVATAR]: async (client, params) => {
@@ -217,7 +226,7 @@ const handlers: Record<string, Handler> = {
 
   // ── 群设置 ──
   [Actions.SET_GROUP_NAME]: async (client, params) => {
-    return await client.setGroupName(gid(params), params.name as string);
+    return await client.setGroupName(gid(params), requireString(params, "name"));
   },
 
   [Actions.SET_GROUP_AVATAR]: async (client, params) => {
@@ -228,7 +237,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.SET_GROUP_CARD]: async (client, params) => {
-    return await client.setGroupCard(gid(params), uid(params), params.card as string);
+    return await client.setGroupCard(gid(params), uid(params), requireString(params, "card"));
   },
 
   [Actions.SET_GROUP_TITLE]: async (client, params) => {
@@ -236,7 +245,7 @@ const handlers: Record<string, Handler> = {
     return await client.setGroupSpecialTitle(
       gid(params),
       uid(params),
-      params.title as string,
+      requireString(params, "title"),
       duration,
     );
   },
@@ -247,7 +256,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.SET_GROUP_REMARK]: async (client, params) => {
-    await client.pickGroup(gid(params)).setRemark(params.remark as string);
+    await client.pickGroup(gid(params)).setRemark(requireString(params, "remark"));
     return { ok: true };
   },
 
@@ -264,7 +273,7 @@ const handlers: Record<string, Handler> = {
 
   [Actions.GROUP_KICK]: async (client, params) => {
     const block = params.block === true;
-    const msg = (params.message as string) ?? "";
+    const msg = optionalString(params, "message") ?? "";
     return await client.setGroupKick(gid(params), uid(params), block, msg);
   },
 
@@ -281,7 +290,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.GROUP_ANNOUNCE]: async (client, params) => {
-    return await client.sendGroupNotice(gid(params), params.content as string);
+    return await client.sendGroupNotice(gid(params), requireString(params, "content"));
   },
 
   [Actions.GROUP_SIGN]: async (client, params) => {
@@ -325,7 +334,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.FRIEND_REMARK]: async (client, params) => {
-    await client.pickFriend(uid(params)).setRemark(params.remark as string);
+    await client.pickFriend(uid(params)).setRemark(requireString(params, "remark"));
     return { ok: true };
   },
 
@@ -368,24 +377,24 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.HANDLE_FRIEND_REQUEST]: async (client, params) => {
-    const flag = params.flag as string;
+    const flag = requireString(params, "flag");
     const approve = params.approve !== false;
-    const remark = (params.remark as string) ?? "";
+    const remark = optionalString(params, "remark") ?? "";
     const block = params.block === true;
     return await client.setFriendAddRequest(flag, approve, remark, block);
   },
 
   [Actions.HANDLE_GROUP_REQUEST]: async (client, params) => {
-    const flag = params.flag as string;
+    const flag = requireString(params, "flag");
     const approve = params.approve !== false;
-    const reason = (params.reason as string) ?? "";
+    const reason = optionalString(params, "reason") ?? "";
     const block = params.block === true;
     return await client.setGroupAddRequest(flag, approve, reason, block);
   },
 
   // ── 好友分组 ──
   [Actions.ADD_FRIEND_CLASS]: async (client, params) => {
-    await client.addClass(params.name as string);
+    await client.addClass(requireString(params, "name"));
     return { ok: true };
   },
 
@@ -395,14 +404,14 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.RENAME_FRIEND_CLASS]: async (client, params) => {
-    await client.renameClass(Number(params.id), params.name as string);
+    await client.renameClass(Number(params.id), requireString(params, "name"));
     return { ok: true };
   },
 
   // ── 群文件系统 ──
   [Actions.GFS_LIST]: async (client, params) => {
     const g = gid(params);
-    const pid = (params.pid as string) ?? "/";
+    const pid = optionalString(params, "pid") ?? "/";
     const gfs = client.acquireGfs(g);
     const files = await gfs.dir(pid);
     return files.map((f: any) => ({
@@ -425,40 +434,40 @@ const handlers: Record<string, Handler> = {
 
   [Actions.GFS_MKDIR]: async (client, params) => {
     const gfs = client.acquireGfs(gid(params));
-    return await gfs.mkdir(params.name as string);
+    return await gfs.mkdir(requireString(params, "name"));
   },
 
   [Actions.GFS_DELETE]: async (client, params) => {
-    const fid = params.fid as string;
+    const fid = requireString(params, "fid");
     const gfs = client.acquireGfs(gid(params));
     await gfs.rm(fid);
     return { ok: true };
   },
 
   [Actions.GFS_RENAME]: async (client, params) => {
-    const fid = params.fid as string;
-    const name = params.name as string;
+    const fid = requireString(params, "fid");
+    const name = requireString(params, "name");
     const gfs = client.acquireGfs(gid(params));
     await gfs.rename(fid, name);
     return { ok: true };
   },
 
   [Actions.GFS_STAT]: async (client, params) => {
-    const fid = params.fid as string;
+    const fid = requireString(params, "fid");
     const gfs = client.acquireGfs(gid(params));
     return await gfs.stat(fid);
   },
 
   [Actions.GFS_MOVE]: async (client, params) => {
-    const fid = params.fid as string;
-    const pid = params.pid as string;
+    const fid = requireString(params, "fid");
+    const pid = requireString(params, "pid");
     const gfs = client.acquireGfs(gid(params));
     await gfs.mv(fid, pid);
     return { ok: true };
   },
 
   [Actions.GFS_DOWNLOAD]: async (client, params) => {
-    const fid = params.fid as string;
+    const fid = requireString(params, "fid");
     const gfs = client.acquireGfs(gid(params));
     return await gfs.download(fid);
   },
@@ -491,8 +500,8 @@ const handlers: Record<string, Handler> = {
 
   [Actions.GROUP_SET_JOIN_TYPE]: async (client, params) => {
     const type = String(params.type);
-    const question = (params.question as string) ?? undefined;
-    const answer = (params.answer as string) ?? undefined;
+    const question = optionalString(params, "question");
+    const answer = optionalString(params, "answer");
     return await client.pickGroup(gid(params)).setGroupJoinType(type, question, answer);
   },
 
@@ -502,7 +511,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.GROUP_MUTE_ANONY]: async (client, params) => {
-    const flag = params.flag as string;
+    const flag = requireString(params, "flag");
     const duration = params.duration !== undefined ? Number(params.duration) : undefined;
     await client.pickGroup(gid(params)).muteAnony(flag, duration);
     return { ok: true };
@@ -515,7 +524,7 @@ const handlers: Record<string, Handler> = {
   [Actions.ADD_FRIEND]: async (client, params) => {
     const g = gid(params);
     const u = uid(params);
-    const comment = (params.comment as string) ?? "";
+    const comment = optionalString(params, "comment") ?? "";
     return await client.addFriend(g, u, comment);
   },
 
@@ -530,7 +539,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.DELETE_STAMP]: async (client, params) => {
-    const id = params.id as string | string[];
+    const id = Array.isArray(params.id) ? params.id as string[] : requireString(params, "id");
     await client.deleteStamp(id);
     return { ok: true };
   },
@@ -545,21 +554,21 @@ const handlers: Record<string, Handler> = {
   [Actions.SEND_GROUP_FILE]: async (client, params) => {
     const filePath = safeFilePath(params);
     const g = gid(params);
-    const pid = (params.pid as string) ?? "/";
-    const name = (params.name as string) ?? undefined;
+    const pid = optionalString(params, "pid") ?? "/";
+    const name = optionalString(params, "name");
     return await client.pickGroup(g).sendFile(filePath, pid, name);
   },
 
   [Actions.FRIEND_RECALL_FILE]: async (client, params) => {
-    const fid = params.fid as string;
+    const fid = requireString(params, "fid");
     return await client.pickFriend(uid(params)).recallFile(fid);
   },
 
   [Actions.GFS_UPLOAD]: async (client, params) => {
     const filePath = safeFilePath(params);
     const g = gid(params);
-    const pid = (params.pid as string) ?? "/";
-    const name = (params.name as string) ?? undefined;
+    const pid = optionalString(params, "pid") ?? "/";
+    const name = optionalString(params, "name");
     const gfs = client.acquireGfs(g);
     return await gfs.upload(filePath, pid, name);
   },
@@ -577,7 +586,7 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.GET_FORWARD_MSG]: async (client, params) => {
-    const resid = params.resid as string;
+    const resid = requireString(params, "resid");
     return await client.getForwardMsg(resid);
   },
 
@@ -593,17 +602,17 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.GUILD_INFO]: async (client, params) => {
-    const guildId = params.guild_id as string;
+    const guildId = requireString(params, "guild_id");
     return client.getGuildInfo(guildId);
   },
 
   [Actions.GUILD_CHANNELS]: async (client, params) => {
-    const guildId = params.guild_id as string;
+    const guildId = requireString(params, "guild_id");
     return client.getChannelList(guildId);
   },
 
   [Actions.GUILD_MEMBERS]: async (client, params) => {
-    const guildId = params.guild_id as string;
+    const guildId = requireString(params, "guild_id");
     return await client.getGuildMemberList(guildId);
   },
 
@@ -615,8 +624,8 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.GUILD_RECALL_MSG]: async (client, params) => {
-    const guildId = params.guild_id as string;
-    const channelId = params.channel_id as string;
+    const guildId = requireString(params, "guild_id");
+    const channelId = requireString(params, "channel_id");
     const seq = Number(params.seq);
     const channel = client.pickGuild(guildId).channels.get(channelId);
     if (!channel) throw new Error(`频道 ${channelId} 不存在`);
@@ -625,12 +634,12 @@ const handlers: Record<string, Handler> = {
 
   // ── 用户文件操作 ──
   [Actions.GET_FILE_INFO]: async (client, params) => {
-    const fid = params.fid as string;
+    const fid = requireString(params, "fid");
     return await client.pickUser(uid(params)).getFileInfo(fid);
   },
 
   [Actions.GET_FILE_URL]: async (client, params) => {
-    const fid = params.fid as string;
+    const fid = requireString(params, "fid");
     return await client.pickUser(uid(params)).getFileUrl(fid);
   },
 
@@ -655,9 +664,10 @@ const handlers: Record<string, Handler> = {
   [Actions.GFS_FORWARD]: async (client, params) => {
     const sourceGid = gid(params);
     const targetGid = Number(params.target_group_id);
-    const fid = params.fid as string;
-    const pid = (params.pid as string) ?? "/";
-    const name = (params.name as string) ?? undefined;
+    if (!Number.isFinite(targetGid) || targetGid <= 0) throw new Error("无效的 target_group_id");
+    const fid = requireString(params, "fid");
+    const pid = optionalString(params, "pid") ?? "/";
+    const name = optionalString(params, "name");
     const sourceGfs = client.acquireGfs(sourceGid);
     const stat = await sourceGfs.stat(fid) as any;
     const targetGfs = client.acquireGfs(targetGid);
@@ -665,8 +675,8 @@ const handlers: Record<string, Handler> = {
   },
 
   [Actions.GFS_FORWARD_OFFLINE]: async (client, params) => {
-    const fid = params.fid as string;
-    const name = (params.name as string) ?? undefined;
+    const fid = requireString(params, "fid");
+    const name = optionalString(params, "name");
     const gfs = client.acquireGfs(gid(params));
     return await gfs.forwardOfflineFile(fid, name);
   },
@@ -734,8 +744,8 @@ const handlers: Record<string, Handler> = {
 
   // ── 视频/加好友设置 ──
   [Actions.GET_VIDEO_URL]: async (client, params) => {
-    const fid = params.fid as string;
-    const md5 = params.md5 as string;
+    const fid = requireString(params, "fid");
+    const md5 = requireString(params, "md5");
     return { url: await client.getVideoUrl(fid, md5) };
   },
 
@@ -745,9 +755,9 @@ const handlers: Record<string, Handler> = {
 
   // ── 频道扩展 ──
   [Actions.GET_FORUM_URL]: async (client, params) => {
-    const guildId = params.guild_id as string;
-    const channelId = params.channel_id as string;
-    const forumId = params.forum_id as string;
+    const guildId = requireString(params, "guild_id");
+    const channelId = requireString(params, "channel_id");
+    const forumId = requireString(params, "forum_id");
     return { url: await client.getForumUrl(guildId, channelId, forumId) };
   },
 

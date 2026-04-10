@@ -4,6 +4,7 @@ import zod from "zod";
 import { argument, option } from "pastel";
 import { IpcCommand } from "@/components/IpcCommand.js";
 import { Actions } from "@/daemon/protocol.js";
+import { termLink } from "@/lib/parse-message.js";
 
 export const description = "获取群头像URL";
 
@@ -25,7 +26,7 @@ export default function GroupAvatarUrl({ args: [gid], options: { size, history }
     <IpcCommand
       action={Actions.GET_GROUP_AVATAR_URL}
       params={{ group_id: gid, size: size ?? 0, history }}
-      render={(data: any) => <Text>{data.url}</Text>}
+      render={(data: any) => <Text>{termLink(data.url, data.url)}</Text>}
     />
   );
 }

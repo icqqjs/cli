@@ -31,24 +31,27 @@ async function main() {
 
   // Login with cached token
   await new Promise<void>((resolve, reject) => {
-    client.once("system.online", resolve);
+    let settled = false;
+    const settle = (fn: () => void) => { if (!settled) { settled = true; fn(); } };
+
+    client.once("system.online", () => settle(resolve));
 
     client.once("system.login.error", (e) => {
-      reject(new Error(e.message));
+      settle(() => reject(new Error(e.message)));
     });
 
     // If interactive verification is required, daemon cannot handle it
     client.once("system.login.qrcode", () => {
-      reject(new Error("Token 过期，需要扫码。请重新执行 icqq login"));
+      settle(() => reject(new Error("Token 过期，需要扫码。请重新执行 icqq login")));
     });
     client.once("system.login.slider", () => {
-      reject(new Error("需要滑块验证。请重新执行 icqq login"));
+      settle(() => reject(new Error("需要滑块验证。请重新执行 icqq login")));
     });
     client.once("system.login.device", () => {
-      reject(new Error("需要设备验证。请重新执行 icqq login"));
+      settle(() => reject(new Error("需要设备验证。请重新执行 icqq login")));
     });
 
-    client.login(uin).catch(reject);
+    client.login(uin).catch((e) => settle(() => reject(e)));
   });
 
   // Start IPC server

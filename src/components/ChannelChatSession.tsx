@@ -4,6 +4,7 @@ import type { IpcClient } from "@/lib/ipc-client.js";
 import type { IpcEvent } from "@/daemon/protocol.js";
 import { Actions } from "@/daemon/protocol.js";
 import { useEmojiMode } from "./chat/useEmojiMode.js";
+import { renderDisplayMessage } from "@/lib/parse-message.js";
 
 type Message = {
   nickname: string;
@@ -128,7 +129,7 @@ export function ChannelChatSession({ ipc, guildId, channelId, channelName }: Pro
             <Text bold color={msg.nickname === "我" ? "green" : msg.nickname === "系统" ? "red" : "blue"}>
               {msg.nickname}
             </Text>
-            : {msg.content}
+            : {renderDisplayMessage(msg.content)}
           </Text>
         ))}
       </Box>

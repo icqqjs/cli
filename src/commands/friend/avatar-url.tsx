@@ -4,6 +4,7 @@ import zod from "zod";
 import { argument, option } from "pastel";
 import { IpcCommand } from "@/components/IpcCommand.js";
 import { Actions } from "@/daemon/protocol.js";
+import { termLink } from "@/lib/parse-message.js";
 
 export const description = "获取用户头像URL";
 
@@ -24,7 +25,7 @@ export default function AvatarUrl({ args: [uid], options: { size } }: Props) {
     <IpcCommand
       action={Actions.GET_AVATAR_URL}
       params={{ user_id: uid, size: size ?? 0 }}
-      render={(data: any) => <Text>{data.url}</Text>}
+      render={(data: any) => <Text>{termLink(data.url, data.url)}</Text>}
     />
   );
 }
