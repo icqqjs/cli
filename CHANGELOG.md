@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/icqqjs/cli/compare/v1.4.2...v1.4.3) (2026-04-10)
+
+
+### Bug Fixes
+
+* 更新多个命令以支持生成可点击的链接，优化消息显示逻辑 ([c5f5b78](https://github.com/icqqjs/cli/commit/c5f5b78bd8ae1d14e1b27032fdabd06aaed35314))
+
 ## [1.4.2](https://github.com/icqqjs/cli/compare/v1.4.1...v1.4.2) (2026-04-09)
 
 
