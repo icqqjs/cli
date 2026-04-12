@@ -221,6 +221,9 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq notify` | 查看通知状态 |
 | `icqq notify on` | 开启系统通知 |
 | `icqq notify off` | 关闭系统通知 |
+| `icqq config set rpc.enabled true` | 启用 RPC TCP 远程连接 |
+| `icqq config set rpc.host 0.0.0.0` | 设置 RPC 监听地址 |
+| `icqq config set rpc.port 9100` | 设置 RPC 监听端口 |
 | `icqq convert uid <qq>` | QQ 号转 UID |
 | `icqq convert uin <uid>` | UID 转 QQ 号 |
 | `icqq get client-key` | 获取 ClientKey |
@@ -263,15 +266,16 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 │  │  文件路由   │─▸│  终端 UI   │  │  (ipc-client) │  │
 │  └────────────┘  └────────────┘  └───────┬───────┘  │
 └──────────────────────────────────────────┬───────────┘
-                                           │ Unix Socket
-                                           │ + Token 认证
-┌──────────────────────────────────────────┴───────────┐
+                                  IPC │         │ RPC
+                           Unix Socket │         │ TCP
+                           Token 直传  │         │ HMAC 挑战-响应
+┌──────────────────────────────────────┴─────────┴─────┐
 │                   守护进程 (Daemon)                    │
-│  ┌────────────┐  ┌────────────┐  ┌───────────────┐  │
-│  │  icqq      │  │  IPC       │  │  Webhook      │  │
-│  │  Client    │◂─│  Server    │─▸│  推送          │  │
-│  │  (QQ协议)  │  │  (server)  │  │  (HTTP POST)  │  │
-│  └─────┬──────┘  └────────────┘  └───────────────┘  │
+│  ┌────────────┐  ┌─────────┐ ┌──────┐ ┌──────────┐  │
+│  │  icqq      │  │  IPC    │ │ RPC  │ │ Webhook  │  │
+│  │  Client    │◂─│  Server │ │Server│ │  推送     │  │
+│  │  (QQ协议)  │  │  (sock) │ │(TCP) │ │(HTTP POST)│  │
+│  └─────┬──────┘  └─────────┘ └──────┘ └──────────┘  │
 └────────┼─────────────────────────────────────────────┘
          │
          ▼
@@ -280,9 +284,60 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 
 - **CLI 层**：基于 [Pastel](https://github.com/nickstefan/pastel) 文件系统路由，`src/commands/` 目录结构即命令结构；React Ink 渲染终端 UI
 - **IPC 通信**：CLI 与守护进程通过 `~/.icqq/<uin>/daemon.sock` Unix Socket 通信，首次连接需 Token 认证
+- **RPC 通信**：可选的 TCP 远程连接，使用 HMAC-SHA256 挑战-响应认证（token 不经过网络传输），支持 IP 限速防暴力破解
 - **守护进程**：登录后在后台运行，管理 icqq 客户端实例，自动断线重连（指数退避，最多 5 次）
 - **Webhook**：可选配置，守护进程将消息事件 POST 到指定 URL
 - **日志轮转**：守护进程日志 > 5MB 自动轮转
+
+### RPC 远程连接
+
+守护进程支持通过 TCP 远程访问，适用于跨机器控制 QQ 账号的场景。
+
+**启用 RPC：**
+
+在 `~/.icqq/config.json` 中配置：
+
+```json
+{
+  "rpc": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 0
+  }
+}
+```
+
+| 字段 | 说明 | 默认值 |
+|------|------|--------|
+| `enabled` | 是否启用 RPC TCP 监听 | `false` |
+| `host` | 监听地址，`"0.0.0.0"` = 对外开放 | `"127.0.0.1"` |
+| `port` | 监听端口，`0` = 系统自动分配 | `0` |
+
+**安全机制：**
+
+1. **HMAC-SHA256 挑战-响应认证** — 连接后服务端发送随机 challenge，客户端用 `HMAC(token, challenge)` 回复，token 永不经过网络传输
+2. **IP 限速** — 同一 IP 在 5 分钟内认证失败 5 次后自动封锁
+3. **默认仅本机** — 必须显式配置 `host: "0.0.0.0"` 才对外暴露
+4. **未认证缓冲区限制** — 4KB 防止未认证连接的内存耗尽攻击
+
+**编程接入：**
+
+```typescript
+import { IpcClient } from "@icqqjs/cli/lib/ipc-client";
+
+// 方式一：指定地址和 token
+const client = await IpcClient.connectRpc({
+  host: "192.168.1.100",
+  port: 9100,
+  token: "your-token-here",
+});
+
+// 方式二：自动从 daemon.rpc 文件读取（本机）
+const client = await IpcClient.connectRpcByUin(12345);
+
+const resp = await client.request("list_friends");
+client.close();
+```
 
 ## 开发
 

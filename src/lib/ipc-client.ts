@@ -1,20 +1,21 @@
 /**
- * IPC 客户端 — CLI 侧用于与守护进程通信的客户端。
+ * IPC/RPC 客户端 — CLI 侧用于与守护进程通信的客户端。
  *
- * 使用方式：
+ * IPC 模式（本地 Unix Socket）：
  *   const client = await IpcClient.connect(uin);
- *   const resp = await client.request(Actions.LIST_FRIENDS);
- *   client.close();
  *
- * 通信协议：JSON + 换行符，基于 Unix Domain Socket。
- * 连接时自动完成 Token 认证。请求超时默认 30 秒。
+ * RPC 模式（远程 TCP）：
+ *   const client = await IpcClient.connectRpc({ host, port, token });
+ *
+ * 通信协议：JSON + 换行符。
+ * IPC 连接使用 Token 直传认证；RPC 使用 HMAC-SHA256 挑战-响应认证。
  *
  * @module ipc-client
  */
 import net from "node:net";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { getSocketPath, getTokenPath } from "./paths.js";
+import { getSocketPath, getTokenPath, getRpcPortPath } from "./paths.js";
 import type {
   IpcRequest,
   IpcResponse,
@@ -31,9 +32,11 @@ export class IpcClient {
   >();
   private eventHandlers = new Map<string, (event: IpcEvent) => void>();
 
-  private constructor(socket: net.Socket) {
+  private constructor(socket: net.Socket, skipDataHandler = false) {
     this.socket = socket;
-    this.socket.on("data", (chunk) => this.onData(chunk.toString()));
+    if (!skipDataHandler) {
+      this.attachDataHandler();
+    }
     this.socket.on("error", (err) => {
       for (const { reject } of this.pending.values()) {
         reject(err);
@@ -42,8 +45,13 @@ export class IpcClient {
     });
   }
 
+  /** 注册数据处理 handler（RPC 模式延迟到 challenge 完成后调用） */
+  private attachDataHandler() {
+    this.socket.on("data", (chunk) => this.onData(chunk.toString()));
+  }
+
   /**
-   * 连接守护进程并完成认证。
+   * 通过 IPC（Unix Socket）连接守护进程并完成认证。
    * @param uin - 目标账号的 QQ 号
    * @returns 已认证的 IpcClient 实例
    * @throws 守护进程未运行或认证失败时抛出错误
@@ -70,6 +78,105 @@ export class IpcClient {
       throw new Error("IPC 认证失败");
     }
     return client;
+  }
+
+  /**
+   * 通过 RPC（TCP）连接守护进程并完成 HMAC 挑战-响应认证。
+   *
+   * @param options.host - 远程主机地址
+   * @param options.port - 远程端口
+   * @param options.token - 认证 token（用于 HMAC 计算，不会明文传输）
+   * @returns 已认证的 IpcClient 实例
+   */
+  static async connectRpc(options: {
+    host: string;
+    port: number;
+    token: string;
+  }): Promise<IpcClient> {
+    const { host, port, token } = options;
+
+    const client = await new Promise<IpcClient>((resolve, reject) => {
+      const sock = net.connect(port, host);
+      // skipDataHandler=true: 延迟注册 onData，避免与 challenge 读取冲突
+      sock.on("connect", () => resolve(new IpcClient(sock, true)));
+      sock.on("error", reject);
+    });
+
+    // Wait for challenge from server, with proper buffering for TCP fragmentation
+    const challenge = await new Promise<string>((resolve, reject) => {
+      let challengeBuffer = "";
+      const timeout = setTimeout(() => {
+        client.socket.removeListener("data", onData);
+        client.close();
+        reject(new Error("RPC 挑战超时"));
+      }, 10000);
+
+      const onData = (chunk: Buffer) => {
+        challengeBuffer += chunk.toString();
+        const nlIdx = challengeBuffer.indexOf("\n");
+        if (nlIdx === -1) return; // 等待更多数据
+
+        clearTimeout(timeout);
+        client.socket.removeListener("data", onData);
+
+        try {
+          const msg = JSON.parse(challengeBuffer.slice(0, nlIdx)) as {
+            challenge?: string;
+          };
+          if (!msg.challenge) {
+            reject(new Error("RPC 服务端未发送挑战"));
+            return;
+          }
+          resolve(msg.challenge);
+        } catch {
+          reject(new Error("RPC 挑战解析失败"));
+        }
+      };
+      client.socket.on("data", onData);
+    });
+
+    // Challenge 阶段结束，注册正式的数据处理 handler
+    client.attachDataHandler();
+
+    // Compute HMAC digest and authenticate
+    const digest = createHmac("sha256", token)
+      .update(challenge)
+      .digest("hex");
+
+    const authResp = await client.request("auth", { digest });
+    if (!authResp.ok) {
+      client.close();
+      throw new Error(authResp.error ?? "RPC 认证失败");
+    }
+    return client;
+  }
+
+  /**
+   * 通过 RPC 连接守护进程（自动从 daemon.rpc 文件读取地址）。
+   * @param uin - 目标账号的 QQ 号
+   * @returns 已认证的 IpcClient 实例
+   */
+  static async connectRpcByUin(uin: number): Promise<IpcClient> {
+    let token: string;
+    try {
+      token = (await readFile(getTokenPath(uin), "utf-8")).trim();
+    } catch {
+      throw new Error("无法读取认证 token，守护进程可能未运行");
+    }
+
+    let rpcInfo: { host: string; port: number };
+    try {
+      const raw = await readFile(getRpcPortPath(uin), "utf-8");
+      rpcInfo = JSON.parse(raw);
+    } catch {
+      throw new Error("RPC 未启用或守护进程未运行");
+    }
+
+    return IpcClient.connectRpc({
+      host: rpcInfo.host,
+      port: rpcInfo.port,
+      token,
+    });
   }
 
   private onData(data: string) {

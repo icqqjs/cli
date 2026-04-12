@@ -17,6 +17,16 @@ export interface AccountConfig {
   logLevel?: string;
 }
 
+/** RPC（TCP 远程连接）配置 */
+export interface RpcConfig {
+  /** 是否启用 RPC TCP 监听（默认 false） */
+  enabled: boolean;
+  /** 监听地址（默认 "127.0.0.1"，仅需远程访问时改为 "0.0.0.0"） */
+  host: string;
+  /** 监听端口（默认 0 = 自动分配） */
+  port: number;
+}
+
 /** 全局配置结构（~/.icqq/config.json） */
 export interface IcqqConfig {
   /** 当前操作的默认账号（可被 -u 或 ICQQ_CURRENT_UIN 覆盖） */
@@ -25,6 +35,8 @@ export interface IcqqConfig {
   webhookUrl?: string;
   /** 是否启用系统桌面通知 */
   notifyEnabled?: boolean;
+  /** RPC TCP 远程连接配置 */
+  rpc?: Partial<RpcConfig>;
   /** 各账号配置，key 为 QQ 号字符串 */
   accounts: Record<string, AccountConfig>;
 }
@@ -64,6 +76,15 @@ export function setAccountConfig(
   account: AccountConfig,
 ): void {
   config.accounts[String(uin)] = account;
+}
+
+/** 解析 RPC 配置，填充默认值 */
+export function resolveRpcConfig(partial?: Partial<RpcConfig>): RpcConfig {
+  return {
+    enabled: partial?.enabled ?? false,
+    host: partial?.host ?? "127.0.0.1",
+    port: partial?.port ?? 0,
+  };
 }
 
 /**

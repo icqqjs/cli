@@ -47,6 +47,10 @@ export function getTokenPath(uin: number): string {
   return path.join(getAccountDir(uin), "daemon.token");
 }
 
+export function getRpcPortPath(uin: number): string {
+  return path.join(getAccountDir(uin), "daemon.rpc");
+}
+
 export function getConfigPath(): string {
   return path.join(getIcqqHome(), "config.json");
 }

@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { createIcqqClient } from "@/lib/client.js";
-import { loadConfig, getAccountConfig } from "@/lib/config.js";
-import { getAccountDir, getPidPath, getSocketPath, getTokenPath } from "@/lib/paths.js";
+import { loadConfig, getAccountConfig, resolveRpcConfig } from "@/lib/config.js";
+import { getAccountDir, getPidPath, getSocketPath, getTokenPath, getRpcPortPath } from "@/lib/paths.js";
 import { sendNotification } from "@/lib/notify.js";
 import { DaemonServer } from "./server.js";
 
@@ -54,12 +54,18 @@ async function main() {
     client.login(uin).catch((e) => settle(() => reject(e)));
   });
 
-  // Start IPC server
-  const server = new DaemonServer(client, uin, ipcToken);
+  // Start IPC + optional RPC server
+  const rpcConfig = resolveRpcConfig(config.rpc);
+  const server = new DaemonServer(client, uin, ipcToken, rpcConfig);
   await server.start();
   console.log(
     `[daemon] 账号 ${uin} 已上线, socket: ${getSocketPath(uin)}`,
   );
+  if (rpcConfig.enabled) {
+    console.log(
+      `[daemon] RPC TCP 已启用: ${rpcConfig.host}:${server.getRpcPort()}`,
+    );
+  }
 
   // Notify parent process
   if (process.send) {
@@ -89,6 +95,11 @@ async function main() {
     }
     try {
       await fs.unlink(getTokenPath(uin));
+    } catch {
+      /* ignore */
+    }
+    try {
+      await fs.unlink(getRpcPortPath(uin));
     } catch {
       /* ignore */
     }
