@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.4](https://github.com/icqqjs/cli/compare/v1.4.3...v1.4.4) (2026-04-12)
+
+
+### Bug Fixes
+
+* 更新子项目引用以保持依赖一致性 ([7fa35dd](https://github.com/icqqjs/cli/commit/7fa35ddf6f52c32cdac09bf46be1ae46bac535e5))
+* 添加 RPC TCP 远程连接支持，优化守护进程与客户端通信 ([a73ce38](https://github.com/icqqjs/cli/commit/a73ce387d49bb7341af3294ed85682d210dcedbd))
+
 ## [1.4.3](https://github.com/icqqjs/cli/compare/v1.4.2...v1.4.3) (2026-04-10)
 
 
