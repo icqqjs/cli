@@ -77,10 +77,14 @@ async function main() {
   const shutdown = async (signal: string) => {
     console.log(`[daemon] 收到 ${signal}，正在关闭…`);
     await server.stop();
-    try {
-      await client.logout();
-    } catch {
-      /* ignore */
+    // 若 IPC LOGOUT handler 已完成 logout，跳过此步骤避免重复调用
+    const alreadyLoggedOut = (process as NodeJS.Process & { _icqqLogoutDone?: boolean })._icqqLogoutDone === true;
+    if (!alreadyLoggedOut) {
+      try {
+        await client.logout();
+      } catch {
+        /* ignore */
+      }
     }
     client.terminate();
     try {

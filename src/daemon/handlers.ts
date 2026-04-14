@@ -50,6 +50,18 @@ const handlers: Record<string, Handler> = {
   // ── 基础 ──
   [Actions.PING]: async () => ({ pong: true, time: Date.now() }),
 
+  [Actions.LOGOUT]: async (client, params) => {
+    const keepToken = params.keep_token === true;
+    // keepAlive=true → 仅本地断开，不向服务器发下线包，token 保留
+    // keepAlive=false → 完整登出，token 作废
+    await client.logout(keepToken);
+    // 标记已完成 logout，避免 SIGTERM handler 重复调用
+    (process as NodeJS.Process & { _icqqLogoutDone?: boolean })._icqqLogoutDone = true;
+    // 触发 entry.ts 的 shutdown 流程（跳过 logout 步骤）
+    setImmediate(() => process.kill(process.pid, "SIGTERM"));
+    return { ok: true };
+  },
+
   [Actions.GET_STATUS]: async (client) => ({
     uin: client.uin,
     nickname: client.nickname,

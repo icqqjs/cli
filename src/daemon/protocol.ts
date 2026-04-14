@@ -62,6 +62,13 @@ export type IpcMessage = IpcResponse | IpcEvent;
 export const Actions = {
   /** 心跳检测，返回 { pong: true, time } */
   PING: "ping",
+  /**
+   * 登出并停止守护进程。
+   * 参数: keep_token?(boolean，默认 false)
+   *   false → 向 QQ 服务器发送下线包，终端会话作废，token 失效（完整登出）
+   *   true  → 仅本地断开，不通知服务器，token 保留（可用 icqq login -r 重连）
+   */
+  LOGOUT: "logout",
 
   // ── 列表查询 ──
   /** 获取好友列表 → FriendInfo[] */
