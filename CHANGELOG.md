@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.5](https://github.com/icqqjs/cli/compare/v1.4.4...v1.4.5) (2026-04-14)
+
+
+### Bug Fixes
+
+* implement service management commands for daemon ([48101f1](https://github.com/icqqjs/cli/commit/48101f13e8bcb6357cfa435e0024030ac9ad9e10))
+* 更新 README 文档，添加登出和系统服务相关命令 ([068b6a6](https://github.com/icqqjs/cli/commit/068b6a68a7ed219f70cfe6d055d73cbc6da38f59))
+
 ## [1.4.4](https://github.com/icqqjs/cli/compare/v1.4.3...v1.4.4) (2026-04-12)
 
 
