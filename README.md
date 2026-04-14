@@ -70,11 +70,24 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 |------|------|
 | `icqq login` | 登录 QQ 账号并启动守护进程 |
 | `icqq login -r` | 使用已保存 token 快速重连 |
-| `icqq status` | 查看所有守护进程状态 |
-| `icqq stop` | 停止守护进程 |
+| `icqq logout` | 退出登录并停止守护进程（token 作废） |
+| `icqq logout -k` | 仅断开连接，保留 token（可 `login -r` 重连） |
+| `icqq logout <uin>` | 退出指定账号 |
 | `icqq switch [uin]` | 切换当前操作的账号 |
 | `icqq profile` | 查看个人资料 |
 | `icqq requests` | 查看待处理的好友/群请求 |
+
+### 系统服务（崩溃自动重启、开机自启）
+
+| 命令 | 说明 |
+|------|------|
+| `icqq service install [-a]` | 将守护进程注册为系统服务（macOS: launchd / Linux: systemd） |
+| `icqq service uninstall [-a]` | 卸载系统服务 |
+| `icqq service start [-a]` | 启动已安装的服务 |
+| `icqq service stop [-a]` | 停止服务（保留文件，不删除） |
+| `icqq service status [-a]` | 查看服务安装/运行状态 |
+
+`-a` 参数对所有已配置账号批量执行。注意：`icqq logout` 不会阻止服务自动重启，如需永久停止请先 `icqq service uninstall`。
 
 ### 配置
 
