@@ -1,8 +1,21 @@
 import fs from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { createIcqqClient } from "@/lib/client.js";
-import { loadConfig, getAccountConfig, resolveRpcConfig } from "@/lib/config.js";
-import { getAccountDir, getPidPath, getSocketPath, getTokenPath, getRpcPortPath } from "@/lib/paths.js";
+import {
+  loadConfig,
+  getAccountConfig,
+  resolveRpcConfig,
+  resolveMcpConfig,
+} from "@/lib/config.js";
+import {
+  getAccountDir,
+  getPidPath,
+  getSocketPath,
+  getTokenPath,
+  getRpcPortPath,
+  getMcpEndpointPath,
+} from "@/lib/paths.js";
+import { McpHost } from "@/mcp/host.js";
 import { sendNotification } from "@/lib/notify.js";
 import { DaemonServer } from "./server.js";
 
@@ -67,6 +80,17 @@ async function main() {
     );
   }
 
+  const mcpConfig = resolveMcpConfig(config.mcp);
+  let mcpHost: McpHost | null = null;
+  if (mcpConfig.enabled) {
+    mcpHost = new McpHost(client, uin, mcpConfig);
+    await mcpHost.start();
+    const mcpUrl = mcpHost.getEndpointUrl();
+    if (mcpUrl) {
+      console.log(`[daemon] MCP 已启用: ${mcpUrl}`);
+    }
+  }
+
   // Notify parent process
   if (process.send) {
     process.send("ready");
@@ -76,6 +100,10 @@ async function main() {
   // Graceful shutdown
   const shutdown = async (signal: string) => {
     console.log(`[daemon] 收到 ${signal}，正在关闭…`);
+    if (mcpHost) {
+      await mcpHost.stop();
+      mcpHost = null;
+    }
     await server.stop();
     // 若 IPC LOGOUT handler 已完成 logout，跳过此步骤避免重复调用
     const alreadyLoggedOut = (process as NodeJS.Process & { _icqqLogoutDone?: boolean })._icqqLogoutDone === true;
@@ -104,6 +132,11 @@ async function main() {
     }
     try {
       await fs.unlink(getRpcPortPath(uin));
+    } catch {
+      /* ignore */
+    }
+    try {
+      await fs.unlink(getMcpEndpointPath(uin));
     } catch {
       /* ignore */
     }

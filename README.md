@@ -77,17 +77,55 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq profile` | 查看个人资料 |
 | `icqq requests` | 查看待处理的好友/群请求 |
 
-### 系统服务（崩溃自动重启、开机自启）
+### 系统服务（全局单例，无按 QQ 号拆分）
+
+`icqq service` 管理 **一个** 全局 supervisor（`com.icqq.daemon` / `icqq.service`），由它按 `config.accounts` 拉起各账号守护进程。
 
 | 命令 | 说明 |
 |------|------|
-| `icqq service install [-a]` | 将守护进程注册为系统服务（macOS: launchd / Linux: systemd） |
-| `icqq service uninstall [-a]` | 卸载系统服务 |
-| `icqq service start [-a]` | 启动已安装的服务 |
-| `icqq service stop [-a]` | 停止服务（保留文件，不删除） |
-| `icqq service status [-a]` | 查看服务安装/运行状态 |
+| `icqq service install` | 安装并启动全局服务 |
+| `icqq service uninstall` | 卸载全局服务 |
+| `icqq service start` | 启动已安装的全局服务 |
+| `icqq service stop` | 停止全局服务（保留安装文件） |
+| `icqq service restart` | 重启全局服务（改 MCP 等配置后执行） |
+| `icqq service status` | 查看全局服务 + 各账号守护进程 / MCP 状态 |
 
-`-a` 参数对所有已配置账号批量执行。注意：`icqq logout` 不会阻止服务自动重启，如需永久停止请先 `icqq service uninstall`。
+注意：`icqq logout` 不会阻止服务自动重启；永久停止请先 `icqq service uninstall`。安装时会自动移除旧版「按账号拆分」的服务文件。
+
+### MCP Server（守护进程内嵌）
+
+MCP 与 IPC **同进程**运行，由配置开关；`icqq login` 或 `icqq service start` 拉起守护进程时按需启用。
+
+```bash
+icqq config set mcp.enabled true
+icqq config set mcp.http.port 3920          # 可选，0 为自动分配
+icqq config set mcp.http.token "your-secret"
+icqq service restart                      # 或重新 login
+```
+
+端点写入 `~/.icqq/<uin>/daemon.mcp`，`icqq service status` 会显示 URL。
+
+| MCP 工具 | 说明 |
+|----------|------|
+| `icqq_invoke` | 调用任意 IPC action（如 `send_private_msg`） |
+| `icqq_list_actions` | 列出可用 action 及参数说明 |
+
+**Cursor 配置示例**（Streamable HTTP）：
+
+```json
+{
+  "mcpServers": {
+    "icqq": {
+      "url": "http://127.0.0.1:3920/mcp",
+      "headers": {
+        "Authorization": "Bearer your-secret"
+      }
+    }
+  }
+}
+```
+
+端口以 `daemon.mcp` 或 `service status` 输出为准。可通过 `config.mcp.plugins` 加载第三方 MCP 插件包。
 
 ### 配置
 
@@ -96,6 +134,8 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq config get` | 查看所有配置 |
 | `icqq config get <key>` | 查看指定配置项 |
 | `icqq config set <key> <value>` | 设置配置项 |
+
+常用配置键：`currentUin`、`webhookUrl`、`notifyEnabled`、`mcp.enabled`、`mcp.http.port`、`mcp.http.token`、`rpc.enabled` 等。
 
 ### 消息
 

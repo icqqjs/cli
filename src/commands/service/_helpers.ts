@@ -1,60 +1,62 @@
 /**
- * service 命令共享工具：路径计算、plist/unit 生成、service 操作、多账号解析。
+ * icqq service — 全局系统服务（单例 launchd/systemd，无按账号拆分）。
  */
 import { execSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
-import { loadConfig, resolveUin } from "@/lib/config.js";
-import { getLogPath } from "@/lib/paths.js";
+import { loadConfig } from "@/lib/config.js";
+import { getSupervisorLogPath } from "@/lib/paths.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ─── path helpers ─────────────────────────────────────────────────────────────
+const LAUNCHD_LABEL = "com.icqq.daemon";
+const SYSTEMD_SERVICE_NAME = "icqq.service";
 
-export function getLaunchdLabel(uin: number) {
-  return `com.icqq.daemon.${uin}`;
+export function getLaunchdLabel(): string {
+  return LAUNCHD_LABEL;
 }
 
-export function getLaunchdPlistPath(uin: number) {
-  return path.join(os.homedir(), "Library", "LaunchAgents", `${getLaunchdLabel(uin)}.plist`);
+export function getLaunchdPlistPath(): string {
+  return path.join(
+    os.homedir(),
+    "Library",
+    "LaunchAgents",
+    `${LAUNCHD_LABEL}.plist`,
+  );
 }
 
-export function getSystemdServiceName(uin: number) {
-  return `icqq-${uin}.service`;
+export function getSystemdServiceName(): string {
+  return SYSTEMD_SERVICE_NAME;
 }
 
-export function getSystemdServicePath(uin: number) {
-  const configHome = process.env.XDG_CONFIG_HOME ?? path.join(os.homedir(), ".config");
-  return path.join(configHome, "systemd", "user", getSystemdServiceName(uin));
+export function getSystemdServicePath(): string {
+  const configHome =
+    process.env.XDG_CONFIG_HOME ?? path.join(os.homedir(), ".config");
+  return path.join(configHome, "systemd", "user", SYSTEMD_SERVICE_NAME);
 }
 
-function getEntryPath(): string {
-  // dist/commands/service/_helpers.js → dist/daemon/entry.js
-  return path.resolve(__dirname, "../../daemon/entry.js");
+function getSupervisorPath(): string {
+  return path.resolve(__dirname, "../../daemon/supervisor.js");
 }
 
-// ─── service file builders ────────────────────────────────────────────────────
-
-export function buildLaunchdPlist(uin: number): string {
+export function buildLaunchdPlist(): string {
   const nodePath = process.execPath;
-  const entryPath = getEntryPath();
-  const logPath = getLogPath(uin);
-  const label = getLaunchdLabel(uin);
+  const supervisorPath = getSupervisorPath();
+  const logPath = getSupervisorLogPath();
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>${label}</string>
+    <string>${LAUNCHD_LABEL}</string>
     <key>ProgramArguments</key>
     <array>
         <string>${nodePath}</string>
-        <string>${entryPath}</string>
-        <string>${uin}</string>
+        <string>${supervisorPath}</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -81,19 +83,19 @@ export function buildLaunchdPlist(uin: number): string {
 `;
 }
 
-export function buildSystemdUnit(uin: number): string {
+export function buildSystemdUnit(): string {
   const nodePath = process.execPath;
-  const entryPath = getEntryPath();
-  const logPath = getLogPath(uin);
+  const supervisorPath = getSupervisorPath();
+  const logPath = getSupervisorLogPath();
 
   return `[Unit]
-Description=icqq QQ daemon for account ${uin}
+Description=icqq QQ daemon supervisor (all accounts)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=${nodePath} ${entryPath} ${uin}
+ExecStart=${nodePath} ${supervisorPath}
 Restart=on-failure
 RestartSec=10
 StandardOutput=append:${logPath}
@@ -106,30 +108,13 @@ WantedBy=default.target
 `;
 }
 
-// ─── account helpers ──────────────────────────────────────────────────────────
-
 export async function getAllUins(): Promise<number[]> {
   const config = await loadConfig();
-  return Object.keys(config.accounts).map(Number).filter((n) => !Number.isNaN(n) && n > 0);
+  return Object.keys(config.accounts)
+    .map(Number)
+    .filter((n) => !Number.isNaN(n) && n > 0)
+    .sort((a, b) => a - b);
 }
-
-/**
- * 根据 argUin 和 -a 标志解析目标 uin 列表。
- * - `-a` → 所有已配置账号
- * - argUin 指定 → 单账号
- * - 都未指定 → currentUin / ICQQ_CURRENT_UIN
- */
-export async function resolveUins(argUin: number | undefined, all: boolean): Promise<number[]> {
-  if (all) {
-    const uins = await getAllUins();
-    if (uins.length === 0) throw new Error("未找到已配置的账号，请先执行 icqq login");
-    return uins;
-  }
-  if (argUin !== undefined) return [argUin];
-  return [await resolveUin()];
-}
-
-// ─── service state ────────────────────────────────────────────────────────────
 
 export type ServiceState = {
   installed: boolean;
@@ -139,98 +124,214 @@ export type ServiceState = {
   lastExitCode: number | null;
 };
 
-// ─── install / uninstall ──────────────────────────────────────────────────────
-
-export async function installService(uin: number, log: (s: string) => void): Promise<void> {
+/** 卸载遗留的按账号拆分的旧版服务文件 */
+async function migrateLegacyPerAccountServices(log: (s: string) => void): Promise<void> {
   if (process.platform === "darwin") {
-    await _installLaunchd(uin, log);
-  } else {
-    await _installSystemd(uin, log);
+    const dir = path.join(os.homedir(), "Library", "LaunchAgents");
+    let entries: string[];
+    try {
+      entries = await fs.readdir(dir);
+    } catch {
+      return;
+    }
+    const legacy = entries.filter(
+      (e) =>
+        e.startsWith("com.icqq.daemon.") &&
+        e.endsWith(".plist") &&
+        e !== `${LAUNCHD_LABEL}.plist`,
+    );
+    for (const file of legacy) {
+      const plistPath = path.join(dir, file);
+      log(`移除旧版服务 ${file}…`);
+      try {
+        execSync(`launchctl unload "${plistPath}" 2>/dev/null`, { stdio: "ignore" });
+      } catch {
+        /* ignore */
+      }
+      try {
+        await fs.unlink(plistPath);
+      } catch {
+        /* ignore */
+      }
+    }
+    return;
+  }
+
+  const configHome =
+    process.env.XDG_CONFIG_HOME ?? path.join(os.homedir(), ".config");
+  const dir = path.join(configHome, "systemd", "user");
+  let entries: string[];
+  try {
+    entries = await fs.readdir(dir);
+  } catch {
+    return;
+  }
+  const legacy = entries.filter(
+    (e) => e.startsWith("icqq-") && e.endsWith(".service") && e !== SYSTEMD_SERVICE_NAME,
+  );
+  for (const file of legacy) {
+    const svcPath = path.join(dir, file);
+    const svcName = file;
+    log(`移除旧版服务 ${file}…`);
+    try {
+      execSync(`systemctl --user disable --now "${svcName}" 2>/dev/null`, {
+        stdio: "ignore",
+      });
+    } catch {
+      /* ignore */
+    }
+    try {
+      await fs.unlink(svcPath);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (legacy.length > 0) {
+    try {
+      execSync("systemctl --user daemon-reload", { stdio: "pipe" });
+    } catch {
+      /* ignore */
+    }
   }
 }
 
-export async function uninstallService(uin: number, log: (s: string) => void): Promise<void> {
+export async function installService(log: (s: string) => void): Promise<void> {
+  await migrateLegacyPerAccountServices(log);
   if (process.platform === "darwin") {
-    await _uninstallLaunchd(uin, log);
+    await _installLaunchd(log);
   } else {
-    await _uninstallSystemd(uin, log);
+    await _installSystemd(log);
   }
 }
 
-// ─── start / stop ─────────────────────────────────────────────────────────────
-
-/** 启动已安装的系统服务（文件必须存在）。 */
-export async function startService(uin: number, log: (s: string) => void): Promise<void> {
+export async function uninstallService(log: (s: string) => void): Promise<void> {
   if (process.platform === "darwin") {
-    await _startLaunchd(uin, log);
+    await _uninstallLaunchd(log);
   } else {
-    await _startSystemd(uin, log);
+    await _uninstallSystemd(log);
   }
 }
 
-/** 停止已安装的系统服务（不删除文件，不影响 icqq stop）。 */
-export async function stopService(uin: number, log: (s: string) => void): Promise<void> {
+export async function startService(log: (s: string) => void): Promise<void> {
   if (process.platform === "darwin") {
-    await _stopLaunchd(uin, log);
+    await _startLaunchd(log);
   } else {
-    await _stopSystemd(uin, log);
+    await _startSystemd(log);
   }
 }
 
-// ─── status query ─────────────────────────────────────────────────────────────
-
-export async function queryService(uin: number): Promise<ServiceState> {
-  return process.platform === "darwin"
-    ? _queryLaunchd(uin)
-    : _querySystemd(uin);
+export async function stopService(log: (s: string) => void): Promise<void> {
+  if (process.platform === "darwin") {
+    await _stopLaunchd(log);
+  } else {
+    await _stopSystemd(log);
+  }
 }
 
-// ─── launchd impl ─────────────────────────────────────────────────────────────
+export async function restartService(log: (s: string) => void): Promise<void> {
+  if (process.platform === "darwin") {
+    await _restartLaunchd(log);
+  } else {
+    await _restartSystemd(log);
+  }
+}
 
-async function _installLaunchd(uin: number, log: (s: string) => void): Promise<void> {
-  const plistPath = getLaunchdPlistPath(uin);
+export async function queryService(): Promise<ServiceState> {
+  return process.platform === "darwin" ? _queryLaunchd() : _querySystemd();
+}
+
+async function _installLaunchd(log: (s: string) => void): Promise<void> {
+  const plistPath = getLaunchdPlistPath();
   await fs.mkdir(path.dirname(plistPath), { recursive: true });
-  // Unload existing (ignore errors)
-  try { execSync(`launchctl unload "${plistPath}" 2>/dev/null`, { stdio: "ignore" }); } catch { /* ignore */ }
+  try {
+    execSync(`launchctl unload "${plistPath}" 2>/dev/null`, { stdio: "ignore" });
+  } catch {
+    /* ignore */
+  }
   log(`写入 plist → ${plistPath}`);
-  await fs.writeFile(plistPath, buildLaunchdPlist(uin), { mode: 0o644 });
+  await fs.writeFile(plistPath, buildLaunchdPlist(), { mode: 0o644 });
   log("加载 launchd 服务…");
   execSync(`launchctl load "${plistPath}"`, { stdio: "pipe" });
 }
 
-async function _uninstallLaunchd(uin: number, log: (s: string) => void): Promise<void> {
-  const plistPath = getLaunchdPlistPath(uin);
-  try { await fs.access(plistPath); } catch {
+async function _uninstallLaunchd(log: (s: string) => void): Promise<void> {
+  const plistPath = getLaunchdPlistPath();
+  try {
+    await fs.access(plistPath);
+  } catch {
     throw new Error(`未找到 plist: ${plistPath}，请确认服务已安装`);
   }
   log("停止并卸载 launchd 服务…");
-  try { execSync(`launchctl unload "${plistPath}"`, { stdio: "pipe" }); } catch { /* already stopped */ }
+  try {
+    execSync(`launchctl unload "${plistPath}"`, { stdio: "pipe" });
+  } catch {
+    /* already stopped */
+  }
   log(`删除 plist → ${plistPath}`);
   await fs.unlink(plistPath);
 }
 
-async function _startLaunchd(uin: number, log: (s: string) => void): Promise<void> {
-  const plistPath = getLaunchdPlistPath(uin);
-  try { await fs.access(plistPath); } catch {
-    throw new Error(`服务未安装，请先执行 icqq service install`);
+async function _startLaunchd(log: (s: string) => void): Promise<void> {
+  const plistPath = getLaunchdPlistPath();
+  try {
+    await fs.access(plistPath);
+  } catch {
+    throw new Error("服务未安装，请先执行 icqq service install");
   }
   log("启动 launchd 服务…");
   execSync(`launchctl load "${plistPath}"`, { stdio: "pipe" });
 }
 
-async function _stopLaunchd(uin: number, log: (s: string) => void): Promise<void> {
-  const plistPath = getLaunchdPlistPath(uin);
-  try { await fs.access(plistPath); } catch {
-    throw new Error(`服务未安装，请先执行 icqq service install`);
+async function _stopLaunchd(log: (s: string) => void): Promise<void> {
+  const plistPath = getLaunchdPlistPath();
+  try {
+    await fs.access(plistPath);
+  } catch {
+    throw new Error("服务未安装，请先执行 icqq service install");
   }
   log("停止 launchd 服务…");
-  try { execSync(`launchctl unload "${plistPath}"`, { stdio: "pipe" }); } catch { /* already stopped */ }
+  try {
+    execSync(`launchctl unload "${plistPath}"`, { stdio: "pipe" });
+  } catch {
+    /* already stopped */
+  }
 }
 
-async function _queryLaunchd(uin: number): Promise<ServiceState> {
-  const plistPath = getLaunchdPlistPath(uin);
+async function _restartLaunchd(log: (s: string) => void): Promise<void> {
+  const plistPath = getLaunchdPlistPath();
+  try {
+    await fs.access(plistPath);
+  } catch {
+    throw new Error("服务未安装，请先执行 icqq service install");
+  }
+  const state = await _queryLaunchd();
+  if (state.running) {
+    const uid = process.getuid?.();
+    if (uid === undefined) {
+      throw new Error("无法获取当前用户 UID");
+    }
+    const target = `gui/${uid}/${LAUNCHD_LABEL}`;
+    log(`重启 launchd 服务 (${target})…`);
+    try {
+      execSync(`launchctl kickstart -k "${target}"`, { stdio: "pipe" });
+      return;
+    } catch {
+      log("kickstart 失败，改用 unload/load…");
+    }
+  }
+  await _stopLaunchd(log);
+  await _startLaunchd(log);
+}
+
+async function _queryLaunchd(): Promise<ServiceState> {
+  const plistPath = getLaunchdPlistPath();
   let installed = false;
-  try { await fs.access(plistPath); installed = true; } catch { /* not installed */ }
+  try {
+    await fs.access(plistPath);
+    installed = true;
+  } catch {
+    /* not installed */
+  }
 
   let running = false;
   let pid: number | null = null;
@@ -238,70 +339,108 @@ async function _queryLaunchd(uin: number): Promise<ServiceState> {
 
   if (installed) {
     try {
-      const out = execSync(`launchctl list "${getLaunchdLabel(uin)}" 2>/dev/null`, { encoding: "utf-8" });
+      const out = execSync(`launchctl list "${LAUNCHD_LABEL}" 2>/dev/null`, {
+        encoding: "utf-8",
+      });
       const pidMatch = out.match(/"PID"\s*=\s*(\d+)/);
       const exitMatch = out.match(/"LastExitStatus"\s*=\s*(\d+)/);
-      if (pidMatch) { pid = Number(pidMatch[1]); running = pid > 0; }
+      if (pidMatch) {
+        pid = Number(pidMatch[1]);
+        running = pid > 0;
+      }
       if (exitMatch) lastExitCode = Number(exitMatch[1]);
-    } catch { /* service not loaded */ }
+    } catch {
+      /* service not loaded */
+    }
   }
 
   return { installed, filePath: plistPath, running, pid, lastExitCode };
 }
 
-// ─── systemd impl ─────────────────────────────────────────────────────────────
-
-async function _installSystemd(uin: number, log: (s: string) => void): Promise<void> {
-  const svcPath = getSystemdServicePath(uin);
-  const svcName = getSystemdServiceName(uin);
+async function _installSystemd(log: (s: string) => void): Promise<void> {
+  const svcPath = getSystemdServicePath();
+  const svcName = getSystemdServiceName();
   await fs.mkdir(path.dirname(svcPath), { recursive: true });
-  try { execSync(`systemctl --user disable --now "${svcName}" 2>/dev/null`, { stdio: "ignore" }); } catch { /* ignore */ }
+  try {
+    execSync(`systemctl --user disable --now "${svcName}" 2>/dev/null`, {
+      stdio: "ignore",
+    });
+  } catch {
+    /* ignore */
+  }
   log(`写入 service → ${svcPath}`);
-  await fs.writeFile(svcPath, buildSystemdUnit(uin), { mode: 0o644 });
+  await fs.writeFile(svcPath, buildSystemdUnit(), { mode: 0o644 });
   log("重载 systemd 配置并启用服务…");
   execSync("systemctl --user daemon-reload", { stdio: "pipe" });
   execSync(`systemctl --user enable --now "${svcName}"`, { stdio: "pipe" });
 }
 
-async function _uninstallSystemd(uin: number, log: (s: string) => void): Promise<void> {
-  const svcName = getSystemdServiceName(uin);
-  const svcPath = getSystemdServicePath(uin);
-  try { await fs.access(svcPath); } catch {
+async function _uninstallSystemd(log: (s: string) => void): Promise<void> {
+  const svcName = getSystemdServiceName();
+  const svcPath = getSystemdServicePath();
+  try {
+    await fs.access(svcPath);
+  } catch {
     throw new Error(`未找到 service 文件: ${svcPath}，请确认服务已安装`);
   }
   log("停止并禁用 systemd 服务…");
-  try { execSync(`systemctl --user disable --now "${svcName}"`, { stdio: "pipe" }); } catch { /* ignore */ }
+  try {
+    execSync(`systemctl --user disable --now "${svcName}"`, { stdio: "pipe" });
+  } catch {
+    /* ignore */
+  }
   log(`删除 service 文件 → ${svcPath}`);
   await fs.unlink(svcPath);
   log("重载 systemd 配置…");
   execSync("systemctl --user daemon-reload", { stdio: "pipe" });
 }
 
-async function _startSystemd(uin: number, log: (s: string) => void): Promise<void> {
-  const svcName = getSystemdServiceName(uin);
-  const svcPath = getSystemdServicePath(uin);
-  try { await fs.access(svcPath); } catch {
-    throw new Error(`服务未安装，请先执行 icqq service install`);
+async function _startSystemd(log: (s: string) => void): Promise<void> {
+  const svcName = getSystemdServiceName();
+  const svcPath = getSystemdServicePath();
+  try {
+    await fs.access(svcPath);
+  } catch {
+    throw new Error("服务未安装，请先执行 icqq service install");
   }
   log("启动 systemd 服务…");
   execSync(`systemctl --user start "${svcName}"`, { stdio: "pipe" });
 }
 
-async function _stopSystemd(uin: number, log: (s: string) => void): Promise<void> {
-  const svcName = getSystemdServiceName(uin);
-  const svcPath = getSystemdServicePath(uin);
-  try { await fs.access(svcPath); } catch {
-    throw new Error(`服务未安装，请先执行 icqq service install`);
+async function _stopSystemd(log: (s: string) => void): Promise<void> {
+  const svcName = getSystemdServiceName();
+  const svcPath = getSystemdServicePath();
+  try {
+    await fs.access(svcPath);
+  } catch {
+    throw new Error("服务未安装，请先执行 icqq service install");
   }
   log("停止 systemd 服务…");
   execSync(`systemctl --user stop "${svcName}"`, { stdio: "pipe" });
 }
 
-async function _querySystemd(uin: number): Promise<ServiceState> {
-  const svcName = getSystemdServiceName(uin);
-  const svcPath = getSystemdServicePath(uin);
+async function _restartSystemd(log: (s: string) => void): Promise<void> {
+  const svcName = getSystemdServiceName();
+  const svcPath = getSystemdServicePath();
+  try {
+    await fs.access(svcPath);
+  } catch {
+    throw new Error("服务未安装，请先执行 icqq service install");
+  }
+  log("重启 systemd 服务…");
+  execSync(`systemctl --user restart "${svcName}"`, { stdio: "pipe" });
+}
+
+async function _querySystemd(): Promise<ServiceState> {
+  const svcName = getSystemdServiceName();
+  const svcPath = getSystemdServicePath();
   let installed = false;
-  try { await fs.access(svcPath); installed = true; } catch { /* not installed */ }
+  try {
+    await fs.access(svcPath);
+    installed = true;
+  } catch {
+    /* not installed */
+  }
 
   let running = false;
   let pid: number | null = null;
@@ -309,16 +448,26 @@ async function _querySystemd(uin: number): Promise<ServiceState> {
 
   if (installed) {
     try {
-      const active = execSync(`systemctl --user is-active "${svcName}" 2>/dev/null`, { encoding: "utf-8" }).trim();
+      const active = execSync(
+        `systemctl --user is-active "${svcName}" 2>/dev/null`,
+        { encoding: "utf-8" },
+      ).trim();
       running = active === "active";
-    } catch { /* not active */ }
+    } catch {
+      /* not active */
+    }
     try {
-      const show = execSync(`systemctl --user show "${svcName}" --property=MainPID,ExecMainStatus 2>/dev/null`, { encoding: "utf-8" });
+      const show = execSync(
+        `systemctl --user show "${svcName}" --property=MainPID,ExecMainStatus 2>/dev/null`,
+        { encoding: "utf-8" },
+      );
       const pidMatch = show.match(/MainPID=(\d+)/);
       const exitMatch = show.match(/ExecMainStatus=(\d+)/);
       if (pidMatch) pid = Number(pidMatch[1]) || null;
       if (exitMatch) lastExitCode = Number(exitMatch[1]);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return { installed, filePath: svcPath, running, pid, lastExitCode };

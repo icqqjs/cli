@@ -4,6 +4,12 @@ import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
 import { loadConfig, saveConfig } from "@/lib/config.js";
+import {
+  applyConfigSet,
+  CONFIG_SET_KEYS,
+  isConfigSetKey,
+  parseConfigSetValue,
+} from "@/lib/config-set.js";
 
 export const description = "设置配置项";
 
@@ -11,7 +17,8 @@ export const args = zod.tuple([
   zod.string().describe(
     argument({
       name: "key",
-      description: "配置项名称 (currentUin, webhookUrl, notifyEnabled)",
+      description:
+        "配置项 (currentUin, webhookUrl, notifyEnabled, mcp.enabled, mcp.http.port, …)",
     }),
   ),
   zod.string().describe(
@@ -26,24 +33,6 @@ type Props = {
   args: zod.infer<typeof args>;
 };
 
-const VALID_KEYS = ["currentUin", "webhookUrl", "notifyEnabled"] as const;
-type ConfigKey = (typeof VALID_KEYS)[number];
-
-function parseValue(key: ConfigKey, raw: string): unknown {
-  switch (key) {
-    case "currentUin":
-      const n = Number(raw);
-      if (Number.isNaN(n) || n <= 0) throw new Error("currentUin 必须为正整数");
-      return n;
-    case "notifyEnabled":
-      if (raw === "true" || raw === "1") return true;
-      if (raw === "false" || raw === "0") return false;
-      throw new Error("notifyEnabled 必须为 true/false");
-    case "webhookUrl":
-      return raw;
-  }
-}
-
 export default function ConfigSet({ args: [key, value] }: Props) {
   const { exit } = useApp();
   const [loading, setLoading] = useState(true);
@@ -53,15 +42,15 @@ export default function ConfigSet({ args: [key, value] }: Props) {
   useEffect(() => {
     void (async () => {
       try {
-        if (!VALID_KEYS.includes(key as ConfigKey)) {
+        if (!isConfigSetKey(key)) {
           throw new Error(
-            `未知配置项: ${key}\n可用配置项: ${VALID_KEYS.join(", ")}`,
+            `未知配置项: ${key}\n可用: ${CONFIG_SET_KEYS.join(", ")}`,
           );
         }
 
-        const parsed = parseValue(key as ConfigKey, value);
+        const parsed = parseConfigSetValue(key, value);
         const config = await loadConfig();
-        (config as any)[key] = parsed;
+        applyConfigSet(config, key, parsed);
         await saveConfig(config);
         setSuccess(true);
       } catch (e) {
@@ -85,6 +74,7 @@ export default function ConfigSet({ args: [key, value] }: Props) {
   return (
     <Text color="green">
       ✔ 已设置 {key} = {value}
+      {key.startsWith("mcp.") ? "（执行 icqq service restart 后生效）" : ""}
     </Text>
   );
 }

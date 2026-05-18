@@ -11,11 +11,13 @@
  *       daemon.sock        Unix Domain Socket
  *       daemon.log         守护进程日志（>5MB 自动轮转为 .log.old）
  *       daemon.token       IPC 认证 Token（0o600）
+ *       daemon.mcp         MCP HTTP 端点信息（启用 mcp 时）
  *       device.json        设备信息
  *       token              QQ 登录 token
  *
  * @module paths
  */
+import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 
@@ -51,6 +53,42 @@ export function getRpcPortPath(uin: number): string {
   return path.join(getAccountDir(uin), "daemon.rpc");
 }
 
+export function getMcpEndpointPath(uin: number): string {
+  return path.join(getAccountDir(uin), "daemon.mcp");
+}
+
+export type McpEndpointFile = {
+  host: string;
+  port: number;
+  basePath: string;
+};
+
+/** 读取守护进程写入的 MCP 端点信息（不存在时返回 null） */
+export async function readMcpEndpoint(
+  uin: number,
+): Promise<McpEndpointFile | null> {
+  try {
+    const raw = await fs.readFile(getMcpEndpointPath(uin), "utf-8");
+    return JSON.parse(raw) as McpEndpointFile;
+  } catch {
+    return null;
+  }
+}
+
+export function formatMcpUrl(endpoint: McpEndpointFile): string {
+  return `http://${endpoint.host}:${endpoint.port}${endpoint.basePath}`;
+}
+
 export function getConfigPath(): string {
   return path.join(getIcqqHome(), "config.json");
+}
+
+/** 全局 supervisor 进程 PID（icqq service） */
+export function getSupervisorPidPath(): string {
+  return path.join(getIcqqHome(), "supervisor.pid");
+}
+
+/** 全局 supervisor 日志 */
+export function getSupervisorLogPath(): string {
+  return path.join(getIcqqHome(), "supervisor.log");
 }

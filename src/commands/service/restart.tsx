@@ -1,18 +1,17 @@
 /**
- * icqq service install — 注册全局系统服务（supervisor 看护所有已配置账号）。
+ * icqq service restart — 重启全局系统服务（加载 MCP 等新配置）。
  */
 import React, { useState, useEffect } from "react";
 import { Text, useApp } from "ink";
 import { Spinner } from "@/components/Spinner.js";
-import { installService } from "./_helpers.js";
+import { restartService } from "./_helpers.js";
 
-export const description = "安装 icqq 全局系统服务（开机自启、崩溃自动重启）";
+export const description = "重启 icqq 全局系统服务";
 
-export default function ServiceInstall() {
+export default function ServiceRestart() {
   const { exit } = useApp();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -23,8 +22,7 @@ export default function ServiceInstall() {
         return;
       }
       try {
-        await installService(() => {});
-        setSuccess(true);
+        await restartService(() => {});
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -39,14 +37,8 @@ export default function ServiceInstall() {
     }
   }, [loading, error, exit]);
 
-  if (loading) return <Spinner label="安装系统服务…" />;
+  if (loading) return <Spinner label="重启系统服务…" />;
   if (error) return <Text color="red">✖ {error}</Text>;
 
-  return (
-    <>
-      <Text color="green">✓ icqq 全局系统服务已安装并启动</Text>
-      <Text dimColor>supervisor 将按 config.accounts 拉起各账号守护进程</Text>
-      <Text dimColor>注意：`icqq logout` 不会阻止服务自动重启，永久停止请 `icqq service uninstall`</Text>
-    </>
-  );
+  return <Text color="green">✓ icqq 全局系统服务已重启</Text>;
 }

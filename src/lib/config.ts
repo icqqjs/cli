@@ -27,6 +27,24 @@ export interface RpcConfig {
   port: number;
 }
 
+/** MCP（守护进程内 HTTP）配置 */
+export interface McpHttpConfig {
+  host: string;
+  port: number;
+  token?: string;
+}
+
+export interface McpConfig {
+  /** 是否在守护进程内启动 MCP HTTP（默认 false） */
+  enabled: boolean;
+  http: McpHttpConfig;
+  /** 额外 MCP 插件模块路径或包名 */
+  plugins?: string[];
+}
+
+/** 解析后的 MCP 配置（含默认值） */
+export type ResolvedMcpConfig = McpConfig;
+
 /** 全局配置结构（~/.icqq/config.json） */
 export interface IcqqConfig {
   /** 当前操作的默认账号（可被 -u 或 ICQQ_CURRENT_UIN 覆盖） */
@@ -37,6 +55,8 @@ export interface IcqqConfig {
   notifyEnabled?: boolean;
   /** RPC TCP 远程连接配置 */
   rpc?: Partial<RpcConfig>;
+  /** MCP HTTP 配置 */
+  mcp?: Partial<McpConfig> & { http?: Partial<McpHttpConfig> };
   /** 各账号配置，key 为 QQ 号字符串 */
   accounts: Record<string, AccountConfig>;
 }
@@ -84,6 +104,21 @@ export function resolveRpcConfig(partial?: Partial<RpcConfig>): RpcConfig {
     enabled: partial?.enabled ?? false,
     host: partial?.host ?? "127.0.0.1",
     port: partial?.port ?? 0,
+  };
+}
+
+/** 解析 MCP 配置，填充默认值 */
+export function resolveMcpConfig(
+  partial?: IcqqConfig["mcp"],
+): ResolvedMcpConfig {
+  return {
+    enabled: partial?.enabled ?? false,
+    http: {
+      host: partial?.http?.host ?? "127.0.0.1",
+      port: partial?.http?.port ?? 0,
+      token: partial?.http?.token,
+    },
+    plugins: partial?.plugins,
   };
 }
 
