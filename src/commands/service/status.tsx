@@ -1,59 +1,90 @@
 /**
- * icqq service status — 全局系统服务状态 + 各账号守护进程状态。
+ * icqq service status — 查询系统服务与守护进程状态。
+ * 不指定 QQ 号时默认列出所有已配置账号。
  */
 import React, { useState, useEffect } from "react";
 import { Text, Box, useApp } from "ink";
+import zod from "zod";
+import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
-import { queryService, getAllUins } from "./_helpers.js";
+import {
+  queryService,
+  resolveServiceUins,
+  type ServiceState,
+} from "./_helpers.js";
 import { readMcpEndpoint, formatMcpUrl } from "@/lib/paths.js";
 import { resolveMcpConfig, loadConfig } from "@/lib/config.js";
 import { getDaemonPid, isDaemonRunning } from "@/daemon/lifecycle.js";
-import type { ServiceState } from "./_helpers.js";
 
-export const description = "查看 icqq 全局系统服务与各账号守护进程状态";
+export const description = "查看系统服务状态（默认全部已配置账号；可指定 QQ 号）";
 
-type AccountRow = {
-  uin: number;
+export const args = zod.tuple([
+  zod.coerce.number().optional().describe(
+    argument({
+      name: "uin",
+      description: "仅查看该 QQ 号（不指定则查看全部已配置账号）",
+    }),
+  ),
+]);
+
+type Props = { args: zod.infer<typeof args> };
+
+type AccountStatus = ServiceState & {
   daemonRunning: boolean;
   daemonPid: number | null;
   mcpUrl: string | null;
   isCurrent: boolean;
 };
 
-function AccountLine({ row }: { row: AccountRow }) {
-  const tag = row.isCurrent ? "*" : " ";
-  const daemon = row.daemonRunning
-    ? `守护:运行中${row.daemonPid ? ` PID:${row.daemonPid}` : ""}`
+function StatusLine({ s }: { s: AccountStatus }) {
+  const tag = s.isCurrent ? "*" : " ";
+  const svc = s.installed
+    ? s.running
+      ? "服务:运行中"
+      : "服务:已停止"
+    : "服务:未安装";
+  const daemon = s.daemonRunning
+    ? `守护:运行中${s.daemonPid ? ` PID:${s.daemonPid}` : ""}`
     : "守护:未运行";
   return (
     <Text>
       <Text dimColor>{tag} </Text>
-      <Text color={row.isCurrent ? "cyan" : undefined} bold={row.isCurrent}>
-        [{row.uin}]
+      <Text color={s.isCurrent ? "cyan" : undefined} bold={s.isCurrent}>
+        [{s.uin}]
       </Text>
       {" "}
-      <Text color={row.daemonRunning ? "green" : "yellow"}>{daemon}</Text>
-      {row.mcpUrl ? <Text color="cyan"> MCP:{row.mcpUrl}</Text> : null}
+      <Text color={s.installed ? "green" : "red"}>{svc}</Text>
+      {s.installed && s.running && s.pid !== null ? (
+        <Text dimColor> svcPID:{s.pid}</Text>
+      ) : null}
+      {!s.running && s.lastExitCode !== null ? (
+        <Text color={s.lastExitCode !== 0 ? "red" : undefined}>
+          {" "}退出:{s.lastExitCode}
+        </Text>
+      ) : null}
+      {" "}
+      <Text color={s.daemonRunning ? "green" : "yellow"}>{daemon}</Text>
+      {s.mcpUrl ? <Text color="cyan"> MCP:{s.mcpUrl}</Text> : null}
     </Text>
   );
 }
 
-function GlobalServiceBlock({ s }: { s: ServiceState }) {
+function StatusDetail({ s }: { s: AccountStatus }) {
   return (
-    <Box flexDirection="column" marginBottom={1}>
-      <Text bold>icqq 全局系统服务</Text>
+    <Box flexDirection="column">
+      {s.isCurrent ? <Text dimColor>（currentUin）</Text> : null}
       <Box gap={1}>
-        <Text bold>已安装：</Text>
+        <Text bold>系统服务已安装：</Text>
         <Text color={s.installed ? "green" : "red"}>{s.installed ? "是" : "否"}</Text>
       </Box>
       {s.installed && (
         <>
           <Box gap={1}>
-            <Text bold>运行中：</Text>
+            <Text bold>服务运行中：</Text>
             <Text color={s.running ? "green" : "yellow"}>{s.running ? "是" : "否"}</Text>
           </Box>
           {s.running && s.pid !== null && (
-            <Box gap={1}><Text bold>Supervisor PID：</Text><Text>{s.pid}</Text></Box>
+            <Box gap={1}><Text bold>服务 PID：</Text><Text>{s.pid}</Text></Box>
           )}
           {!s.running && s.lastExitCode !== null && (
             <Box gap={1}>
@@ -64,15 +95,24 @@ function GlobalServiceBlock({ s }: { s: ServiceState }) {
           <Box gap={1}><Text bold>服务文件：</Text><Text dimColor>{s.filePath}</Text></Box>
         </>
       )}
+      <Box gap={1}>
+        <Text bold>守护进程：</Text>
+        <Text color={s.daemonRunning ? "green" : "yellow"}>
+          {s.daemonRunning ? "运行中" : "未运行"}
+        </Text>
+        {s.daemonPid !== null && <Text dimColor> (PID {s.daemonPid})</Text>}
+      </Box>
+      {s.mcpUrl ? (
+        <Box gap={1}><Text bold>MCP：</Text><Text color="cyan">{s.mcpUrl}</Text></Box>
+      ) : null}
     </Box>
   );
 }
 
-export default function ServiceStatus() {
+export default function ServiceStatus({ args: [argUin] }: Props) {
   const { exit } = useApp();
   const [loading, setLoading] = useState(true);
-  const [service, setService] = useState<ServiceState | null>(null);
-  const [accounts, setAccounts] = useState<AccountRow[]>([]);
+  const [results, setResults] = useState<AccountStatus[]>([]);
   const [fatalError, setFatalError] = useState("");
 
   useEffect(() => {
@@ -84,14 +124,13 @@ export default function ServiceStatus() {
         return;
       }
       try {
-        const svc = await queryService();
-        setService(svc);
-
+        const uins = await resolveServiceUins(argUin);
         const config = await loadConfig();
         const mcpCfg = resolveMcpConfig(config.mcp);
-        const uins = await getAllUins();
-        const rows: AccountRow[] = [];
+
+        const out: AccountStatus[] = [];
         for (const uin of uins) {
+          const svc = await queryService(uin);
           let mcpUrl: string | null = null;
           if (mcpCfg.enabled) {
             const ep = await readMcpEndpoint(uin);
@@ -99,21 +138,21 @@ export default function ServiceStatus() {
           }
           const daemonRunning = await isDaemonRunning(uin);
           const daemonPid = daemonRunning ? await getDaemonPid(uin) : null;
-          rows.push({
-            uin,
+          out.push({
+            ...svc,
             daemonRunning,
             daemonPid,
             mcpUrl,
             isCurrent: config.currentUin === uin,
           });
         }
-        setAccounts(rows);
+        setResults(out);
       } catch (e) {
         setFatalError(e instanceof Error ? e.message : String(e));
       }
       setLoading(false);
     })();
-  }, []);
+  }, [argUin]);
 
   useEffect(() => {
     if (!loading) {
@@ -124,22 +163,17 @@ export default function ServiceStatus() {
 
   if (loading) return <Spinner label="查询服务状态…" />;
   if (fatalError) return <Text color="red">错误: {fatalError}</Text>;
-  if (!service) return null;
+
+  if (results.length === 1) {
+    return <StatusDetail s={results[0]!} />;
+  }
 
   return (
     <Box flexDirection="column">
-      <GlobalServiceBlock s={service} />
-      <Text bold>账号守护进程</Text>
-      {accounts.length === 0 ? (
-        <Text dimColor>未配置账号，请先 icqq login</Text>
-      ) : (
-        <>
-          <Text dimColor>共 {accounts.length} 个账号（* 为 currentUin）</Text>
-          {accounts.map((row) => (
-            <AccountLine key={row.uin} row={row} />
-          ))}
-        </>
-      )}
+      <Text dimColor>共 {results.length} 个账号（* 为 currentUin）</Text>
+      {results.map((s) => (
+        <StatusLine key={s.uin} s={s} />
+      ))}
     </Box>
   );
 }

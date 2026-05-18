@@ -14,6 +14,8 @@
  *       daemon.mcp         MCP HTTP 端点信息（启用 mcp 时）
  *       device.json        设备信息
  *       token              QQ 登录 token
+ *     supervisor.pid       已废弃（勿使用）
+ *     supervisor.log       已废弃（勿使用）
  *
  * @module paths
  */
@@ -83,12 +85,3 @@ export function getConfigPath(): string {
   return path.join(getIcqqHome(), "config.json");
 }
 
-/** 全局 supervisor 进程 PID（icqq service） */
-export function getSupervisorPidPath(): string {
-  return path.join(getIcqqHome(), "supervisor.pid");
-}
-
-/** 全局 supervisor 日志 */
-export function getSupervisorLogPath(): string {
-  return path.join(getIcqqHome(), "supervisor.log");
-}

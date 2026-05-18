@@ -77,20 +77,20 @@ ICQQ_CURRENT_UIN=12345 icqq friend list
 | `icqq profile` | 查看个人资料 |
 | `icqq requests` | 查看待处理的好友/群请求 |
 
-### 系统服务（全局单例，无按 QQ 号拆分）
+### 系统服务（每账号一个 plist/unit）
 
-`icqq service` 管理 **一个** 全局 supervisor（`com.icqq.daemon` / `icqq.service`），由它按 `config.accounts` 拉起各账号守护进程。
+每个 QQ 号对应独立的 launchd plist 或 systemd unit（`com.icqq.daemon.<uin>` / `icqq-<uin>.service`）。**不指定 QQ 号时，默认对 `config.accounts` 中全部已配置账号执行**；也可传入 QQ 号只操作单个账号。
 
 | 命令 | 说明 |
 |------|------|
-| `icqq service install` | 安装并启动全局服务 |
-| `icqq service uninstall` | 卸载全局服务 |
-| `icqq service start` | 启动已安装的全局服务 |
-| `icqq service stop` | 停止全局服务（保留安装文件） |
-| `icqq service restart` | 重启全局服务（改 MCP 等配置后执行） |
-| `icqq service status` | 查看全局服务 + 各账号守护进程 / MCP 状态 |
+| `icqq service install [uin]` | 安装并启动系统服务（默认全部账号） |
+| `icqq service uninstall [uin]` | 卸载系统服务 |
+| `icqq service start [uin]` | 启动已安装的服务 |
+| `icqq service stop [uin]` | 停止服务（保留 plist/unit） |
+| `icqq service restart [uin]` | 重启服务（改 MCP 等配置后执行） |
+| `icqq service status [uin]` | 查看服务、守护进程、MCP 状态（默认全部账号） |
 
-注意：`icqq logout` 不会阻止服务自动重启；永久停止请先 `icqq service uninstall`。安装时会自动移除旧版「按账号拆分」的服务文件。
+注意：`icqq logout` 不会阻止服务自动重启；永久停止请先 `icqq service uninstall`。
 
 ### MCP Server（守护进程内嵌）
 
