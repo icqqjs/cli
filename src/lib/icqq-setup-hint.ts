@@ -24,3 +24,18 @@ export const TOKEN_HELP = {
   ],
   alt: "也可跳过交互：icqq setup --token <PAT>  或  export GITHUB_TOKEN=<PAT>",
 } as const;
+
+type LogFn = (text: string, tone?: "dim" | "ok" | "warn" | "err") => void;
+
+/** 将 Token 获取说明写入 setup 步骤日志（③ 阶段立即展示） */
+export function pushTokenHelpLogs(log: LogFn, retryNote?: string): void {
+  if (retryNote) {
+    log(`   ⚠ ${retryNote}`, "warn");
+  }
+  log(`   【${TOKEN_HELP.title}】`, "ok");
+  log(`   ${TOKEN_HELP.intro}`);
+  for (const step of TOKEN_HELP.steps) {
+    log(`   ${step}`);
+  }
+  log(`   ${TOKEN_HELP.alt}`);
+}

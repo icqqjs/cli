@@ -12,7 +12,7 @@ import {
   IcqqInstallError,
   type PackageManager,
 } from "@/lib/icqq-install.js";
-import { TOKEN_HELP } from "@/lib/icqq-setup-hint.js";
+import { pushTokenHelpLogs } from "@/lib/icqq-setup-hint.js";
 
 export const description = "检查并安装 @icqqjs/icqq 依赖（不修改 ~/.npmrc）";
 
@@ -70,34 +70,6 @@ function SetupLog({ entries }: { entries: LogEntry[] }) {
   );
 }
 
-function TokenHelpPanel() {
-  return (
-    <Box
-      flexDirection="column"
-      gap={0}
-      borderStyle="round"
-      borderColor="cyan"
-      paddingX={1}
-      marginBottom={1}
-    >
-      <Text bold color="cyan">
-        {TOKEN_HELP.title}
-      </Text>
-      <Text>{TOKEN_HELP.intro}</Text>
-      <Box flexDirection="column" marginTop={1}>
-        {TOKEN_HELP.steps.map((line) => (
-          <Text key={line} wrap="wrap">
-            {line}
-          </Text>
-        ))}
-      </Box>
-      <Box marginTop={1}>
-        <Text dimColor>{TOKEN_HELP.alt}</Text>
-      </Box>
-    </Box>
-  );
-}
-
 export default function Setup({ options: cliOptions }: Props) {
   const { exit } = useApp();
   const [phase, setPhase] = useState<Phase>("init");
@@ -105,7 +77,6 @@ export default function Setup({ options: cliOptions }: Props) {
   const [icqqPath, setIcqqPath] = useState<string | null>(null);
   const [activeToken, setActiveToken] = useState("");
   const [tokenInput, setTokenInput] = useState("");
-  const [retryNote, setRetryNote] = useState("");
   const [fatalMessage, setFatalMessage] = useState("");
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logsRef = useRef<LogEntry[]>([]);
@@ -122,6 +93,17 @@ export default function Setup({ options: cliOptions }: Props) {
       setTimeout(() => exit(), code ? 200 : 120);
     },
     [exit],
+  );
+
+  const enterNeedToken = useCallback(
+    (retryNote?: string) => {
+      if (retryNote) {
+        pushLog("③ 重新输入 Token …", "warn");
+        pushTokenHelpLogs(pushLog, retryNote);
+      }
+      setPhase("need-token");
+    },
+    [pushLog],
   );
 
   // 1–2：检测包管理器并查找已安装的 icqq
@@ -156,13 +138,15 @@ export default function Setup({ options: cliOptions }: Props) {
         setActiveToken(preset);
         setPhase("installing");
       } else {
-        pushLog("   → 未提供 Token，需要交互输入（见下方获取说明）", "warn");
-        setPhase("need-token");
+        pushLog("   → 未提供 Token，请按下列说明获取后粘贴", "warn");
+        pushTokenHelpLogs(pushLog);
+        pushLog("   → 等待输入 Token：", "ok");
+        enterNeedToken();
       }
     })();
-  }, [phase, cliOptions.token, pushLog]);
+  }, [phase, cliOptions.token, pushLog, enterNeedToken]);
 
-  // 5–7：使用 token 全局安装
+  // 4–5：使用 token 全局安装
   useEffect(() => {
     if (phase !== "installing" || !activeToken) return;
     void (async () => {
@@ -192,11 +176,10 @@ export default function Setup({ options: cliOptions }: Props) {
       } catch (e) {
         if (e instanceof IcqqInstallError && e.kind === "auth") {
           pushLog(`   → ${e.message}`, "warn");
-          pushLog("   → 将返回 Token 输入步骤", "warn");
-          setRetryNote(e.message);
+          pushLog("   → 返回 ③，请重新获取 Token", "warn");
           setActiveToken("");
           setTokenInput("");
-          setPhase("need-token");
+          enterNeedToken(e.message);
           return;
         }
         const msg =
@@ -212,7 +195,7 @@ export default function Setup({ options: cliOptions }: Props) {
         setPhase("fatal");
       }
     })();
-  }, [phase, pm, activeToken, pushLog]);
+  }, [phase, pm, activeToken, pushLog, enterNeedToken]);
 
   useEffect(() => {
     if (phase === "ready" || phase === "done") finish();
@@ -230,7 +213,6 @@ export default function Setup({ options: cliOptions }: Props) {
           return;
         }
         pushLog("   → 已接收 Token（交互输入）", "ok");
-        setRetryNote("");
         setActiveToken(t);
         setPhase("installing");
         return;
@@ -255,36 +237,24 @@ export default function Setup({ options: cliOptions }: Props) {
     <Box flexDirection="column" gap={1} paddingX={1}>
       <Text bold>icqq setup</Text>
 
-      {phase === "need-token" ? (
-        <>
-          {retryNote && (
-            <Box marginBottom={1}>
-              <Text color="yellow">
-                ⚠ {retryNote}（请按下方说明重新获取或检查 Token 权限）
-              </Text>
-            </Box>
-          )}
-          <TokenHelpPanel />
-          <SetupLog entries={logs} />
-          <Box flexDirection="column" marginTop={1}>
-            <Text bold>粘贴 Token：</Text>
-            <Box>
-              <Text color="cyan">❯ </Text>
-              <Text>
-                {"•".repeat(tokenInput.length)}
-                <Text color="cyan">█</Text>
-              </Text>
-            </Box>
-          </Box>
-        </>
-      ) : (
-        <SetupLog entries={logs} />
-      )}
+      <SetupLog entries={logs} />
 
       {phase === "init" && <Text dimColor>进行中 …</Text>}
 
       {phase === "ready" && (
         <Text color="green">✓ 完成：@icqqjs/icqq 已可正常加载。</Text>
+      )}
+
+      {phase === "need-token" && (
+        <Box flexDirection="column" marginTop={1}>
+          <Box>
+            <Text color="cyan">❯ </Text>
+            <Text>
+              {"•".repeat(tokenInput.length)}
+              <Text color="cyan">█</Text>
+            </Text>
+          </Box>
+        </Box>
       )}
 
       {phase === "installing" && (
