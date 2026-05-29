@@ -51,37 +51,40 @@ export function useFileMode(active: boolean) {
 
   useEffect(() => {
     if (!active) return;
-    try {
-      const dirEntries = fs.readdirSync(cwd, { withFileTypes: true });
-      const list: FileEntry[] = [];
-      const parent = path.dirname(cwd);
-      if (parent !== cwd) {
-        list.push({ name: "..", fullPath: parent, isDir: true, tag: "other" });
-      }
-      for (const e of dirEntries) {
-        if (e.name.startsWith(".")) continue;
-        const full = path.join(cwd, e.name);
-        if (e.isDirectory()) {
-          list.push({ name: e.name + "/", fullPath: full, isDir: true, tag: "other" });
-        } else {
-          const ext = path.extname(e.name).toLowerCase();
-          if (MEDIA_EXTS.has(ext) || filter === "") {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const dirEntries = await fs.promises.readdir(cwd, { withFileTypes: true });
+        if (cancelled) return;
+        const list: FileEntry[] = [];
+        const parent = path.dirname(cwd);
+        if (parent !== cwd) {
+          list.push({ name: "..", fullPath: parent, isDir: true, tag: "other" });
+        }
+        for (const e of dirEntries) {
+          if (e.name.startsWith(".")) continue;
+          const full = path.join(cwd, e.name);
+          if (e.isDirectory()) {
+            list.push({ name: e.name + "/", fullPath: full, isDir: true, tag: "other" });
+          } else {
+            const ext = path.extname(e.name).toLowerCase();
             list.push({ name: e.name, fullPath: full, isDir: false, tag: getFileTag(ext) });
           }
         }
+        list.sort((a, b) => {
+          if (a.name === "..") return -1;
+          if (b.name === "..") return 1;
+          if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+        setEntries(list);
+        setIndex(0);
+      } catch {
+        if (!cancelled) setEntries([]);
       }
-      list.sort((a, b) => {
-        if (a.name === "..") return -1;
-        if (b.name === "..") return 1;
-        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      });
-      setEntries(list);
-      setIndex(0);
-    } catch {
-      setEntries([]);
-    }
-  }, [active, cwd, filter]);
+    })();
+    return () => { cancelled = true; };
+  }, [active, cwd]);
 
   const filtered = useMemo(() => {
     if (!filter) return entries;

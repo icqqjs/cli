@@ -2,6 +2,7 @@ import type { Client } from "@icqqjs/icqq";
 import { Actions, type IpcRequest, type IpcResponse } from "./protocol.js";
 import { parseMessage, stringifyMessage } from "@/lib/parse-message.js";
 import fs from "node:fs/promises";
+import path from "node:path";
 
 type Handler = (
   client: Client,
@@ -32,10 +33,11 @@ function requireString(p: Record<string, unknown>, key: string): string {
   if (typeof v !== "string" || !v) throw new Error(`缺少参数: ${key}`);
   return v;
 }
-/** Validate file path: must be a non-empty string, no null bytes or path traversal */
+/** Validate file path: must be a non-empty string, no null bytes, path traversal, or absolute paths */
 function safeFilePath(p: Record<string, unknown>, key = "file"): string {
   const v = requireString(p, key);
   if (v.includes("\0") || v.includes("..")) throw new Error("无效的文件路径");
+  if (path.isAbsolute(v)) throw new Error("不允许使用绝对路径");
   return v;
 }
 /** Extract an optional string param (returns undefined if missing, throws if wrong type) */

@@ -28,11 +28,16 @@ export function useIpcRequest(
           throw new Error("守护进程未运行，请先执行 icqq login");
 
         const ipc = await IpcClient.connect(resolvedUin);
-        const resp = await ipc.request(action, params);
-        ipc.close();
+        try {
+          const resp = await ipc.request(action, params);
+          ipc.close();
 
-        if (!resp.ok) throw new Error(resp.error ?? "请求失败");
-        if (!cancelled) setData(resp.data);
+          if (!resp.ok) throw new Error(resp.error ?? "请求失败");
+          if (!cancelled) setData(resp.data);
+        } catch (e) {
+          ipc.close();
+          throw e;
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       }

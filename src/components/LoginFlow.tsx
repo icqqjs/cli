@@ -118,9 +118,10 @@ export function LoginFlow({
       setInputValue("");
     };
 
+    const onQrcodeWrapper = (ev: any) => void onQrcode(ev);
     client.on("system.online", onOnline);
     client.on("system.login.error", onLoginError);
-    client.on("system.login.qrcode", (ev: any) => void onQrcode(ev));
+    client.on("system.login.qrcode", onQrcodeWrapper);
     client.on("system.login.slider", onSlider);
     client.on("system.login.device", onDevice);
     client.on("system.login.auth", onAuth);
@@ -149,6 +150,12 @@ export function LoginFlow({
 
     return () => {
       disposedRef.current = true;
+      client.off("system.online", onOnline);
+      client.off("system.login.error", onLoginError);
+      client.off("system.login.qrcode", onQrcodeWrapper);
+      client.off("system.login.slider", onSlider);
+      client.off("system.login.device", onDevice);
+      client.off("system.login.auth", onAuth);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

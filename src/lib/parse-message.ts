@@ -92,9 +92,14 @@ function isLocalPath(str: string): boolean {
 
 /** Read a local file and return a base64:// data URI */
 function fileToBase64(filePath: string): string {
-  const resolved = path.resolve(filePath);
-  const buf = fs.readFileSync(resolved);
-  return "base64://" + buf.toString("base64");
+  try {
+    const resolved = path.resolve(filePath);
+    const buf = fs.readFileSync(resolved);
+    return "base64://" + buf.toString("base64");
+  } catch {
+    // 文件不存在或无法读取时返回原路径
+    return filePath;
+  }
 }
 
 export function parseMessage(raw: string): string | (string | MessageElem)[] {
@@ -114,7 +119,7 @@ export function parseMessage(raw: string): string | (string | MessageElem)[] {
       case "image":
         parts.push({
           type: "image",
-          file: isLocalPath(value!) ? fileToBase64(value!) : value!,
+          file: value && isLocalPath(value) ? fileToBase64(value) : (value ?? ""),
         });
         break;
       case "at":

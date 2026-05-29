@@ -44,7 +44,7 @@ function notifyMacOS({ title, body, subtitle, sound }: NotifyOptions) {
 
 function notifyLinux({ title, body, subtitle }: NotifyOptions) {
   // notify-send from libnotify — available on most Linux desktops
-  const fullBody = subtitle ? `<b>${escapeXml(subtitle)}</b>\n${body}` : body;
+  const fullBody = subtitle ? `<b>${escapeXml(subtitle)}</b>\n${escapeXml(body)}` : escapeXml(body);
   execFile("notify-send", [title, fullBody, "--app-name=icqq"], silentCallback);
 }
 
@@ -75,7 +75,7 @@ function notifyWindows({ title, body, subtitle }: NotifyOptions) {
 }
 
 function escapeAppleScript(str: string): string {
-  return `"${str.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  return `"${str.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r")}"`;
 }
 
 function escapeXml(str: string): string {

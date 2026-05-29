@@ -7,6 +7,7 @@ import type { Client } from "@icqqjs/icqq";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
+import { timingSafeEqual } from "node:crypto";
 import express from "express";
 import type { ResolvedMcpConfig } from "@/lib/config.js";
 import { getMcpEndpointPath } from "@/lib/paths.js";
@@ -62,7 +63,11 @@ export class McpHost {
       app.use(basePath, (req, res, next) => {
         const auth = req.headers.authorization;
         const expected = `Bearer ${token}`;
-        if (auth !== expected) {
+        if (
+          !auth ||
+          auth.length !== expected.length ||
+          !timingSafeEqual(Buffer.from(auth), Buffer.from(expected))
+        ) {
           res.status(401).json({ error: "Unauthorized" });
           return;
         }
@@ -84,6 +89,7 @@ export class McpHost {
         });
       } catch (error) {
         console.error("[mcp] 请求处理失败:", error);
+        void transport.close();
         if (!res.headersSent) {
           res.status(500).json({
             jsonrpc: "2.0",

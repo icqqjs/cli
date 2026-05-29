@@ -8,8 +8,22 @@ export type ActionMeta = {
   paramsHint?: string;
 };
 
-/** MCP 禁止调用的 action（避免 AI 关闭守护进程等） */
-export const MCP_BLOCKED_ACTIONS = new Set<string>([Actions.LOGOUT]);
+/** MCP 禁止调用的 action（避免 AI 关闭守护进程、泄漏密钥、执行破坏性操作等） */
+export const MCP_BLOCKED_ACTIONS = new Set<string>([
+  Actions.LOGOUT,
+  Actions.GET_CLIENT_KEY,
+  Actions.GET_PSKEY,
+  Actions.SET_WEBHOOK,
+  Actions.FRIEND_DELETE,
+  Actions.GROUP_KICK,
+  Actions.GROUP_QUIT,
+  Actions.GROUP_MUTE,
+  Actions.GROUP_MUTE_ALL,
+  Actions.DELETE_MSG,
+  Actions.RECALL_MSG,
+  Actions.DELETE_STAMP,
+  Actions.GFS_DELETE,
+]);
 
 export const ACTION_VALUES = Object.values(Actions) as string[];
 
@@ -126,8 +140,8 @@ const HINTS: Partial<Record<string, ActionMeta>> = {
   [Actions.GUILD_CHANNEL_SHARE]: { description: "发送频道分享链接", paramsHint: "guild_id, channel_id, url, title, ..." },
   [Actions.GET_PIC_URL]: { description: "获取图片 URL", paramsHint: "elem, group_id? | user_id?" },
   [Actions.GET_PTT_URL]: { description: "获取语音 URL", paramsHint: "elem, group_id? | user_id?" },
-  [Actions.SUBSCRIBE]: { description: "订阅消息推送", paramsHint: "type, id" },
-  [Actions.UNSUBSCRIBE]: { description: "取消订阅", paramsHint: "type, id" },
+  [Actions.SUBSCRIBE]: { description: "订阅 icqq 事件推送", paramsHint: "（无必填参数）" },
+  [Actions.UNSUBSCRIBE]: { description: "取消订阅", paramsHint: "reqId" },
   [Actions.SEND_PRIVATE_FILE]: { description: "发送私聊文件", paramsHint: "user_id, file" },
   [Actions.SEND_GROUP_FILE]: { description: "发送群文件", paramsHint: "group_id, file, pid?, name?" },
   [Actions.SET_WEBHOOK]: { description: "设置 Webhook 地址", paramsHint: "url" },

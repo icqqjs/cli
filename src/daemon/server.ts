@@ -5,14 +5,17 @@ import type { Client } from "@icqqjs/icqq";
 import type { IpcRequest, IpcMessage } from "./protocol.js";
 import { Actions } from "./protocol.js";
 import { handleRequest } from "./handlers.js";
-import { stringifyMessage, renderDisplayMessage } from "@/lib/parse-message.js";
+import { renderDisplayMessage } from "@/lib/parse-message.js";
+import {
+  icqqEventJsonReplacer,
+  serializeIcqqEvent,
+} from "@/lib/serialize-icqq-event.js";
 import { loadConfig, saveConfig, type RpcConfig } from "@/lib/config.js";
 import { getSocketPath, getRpcPortPath } from "@/lib/paths.js";
 import { sendNotification } from "@/lib/notify.js";
 
-type Subscription = {
-  type: "group" | "private" | "guild";
-  id: number | string;
+type EventSubscription = {
+  /** 订阅请求 id，IPC 推送时回填到 IpcEvent.id */
   reqId: string;
 };
 
@@ -32,8 +35,8 @@ const RATE_LIMIT_MAX_FAILURES = 5;
  *   - IPC 连接使用 Token 直传认证
  *   - RPC 连接使用 HMAC-SHA256 挑战-响应认证 + IP 限速
  *   - 将 IPC/RPC 请求分发给 handlers 处理
- *   - 管理消息订阅（SUBSCRIBE/UNSUBSCRIBE）
- *   - 将 QQ 消息转发到已订阅的客户端、Webhook、系统通知
+ *   - 管理事件订阅（SUBSCRIBE/UNSUBSCRIBE）
+ *   - 将 icqq client 收到的全部事件推送到已订阅的 IPC/RPC 客户端
  *
  * 生命周期：
  *   1. new DaemonServer(client, uin, ipcToken, rpcConfig?)
@@ -48,7 +51,7 @@ export class DaemonServer {
   private client: Client;
   private uin: number;
   private ipcToken: string;
-  private subscriptions = new Map<string, Subscription[]>();
+  private subscriptions = new Map<string, EventSubscription[]>();
   private sockets = new Map<string, net.Socket>();
   private authedSockets = new Set<string>();
   /** Pending HMAC challenges keyed by socketId */
@@ -72,7 +75,7 @@ export class DaemonServer {
     this.ipcServer = net.createServer((socket) =>
       this.handleConnection(socket, "ipc"),
     );
-    this.setupMessageForwarding();
+    this.setupEventForwarding();
     void this.loadWebhook();
   }
 
@@ -104,125 +107,83 @@ export class DaemonServer {
     }
   }
 
-  private setupMessageForwarding() {
-    this.client.on("message", (event: any) => {
-      const msgType = event.message_type;
-      const groupId = "group_id" in event ? (event.group_id as number) : 0;
-      const targetId = msgType === "group" ? groupId : event.user_id;
+  /**
+   * 拦截 icqq 的 em()，将 client 能收到的每个事件推送给 IPC 订阅方。
+   * 仅 hook em（icqq 标准事件分发），避免 emit 冒泡重复推送。
+   */
+  private setupEventForwarding() {
+    const client = this.client as Client & {
+      em: (name?: string, data?: unknown) => void;
+    };
+    const originalEm = client.em.bind(client);
 
-      const eventData = {
-        type: msgType,
-        from_id: event.user_id,
-        user_id: event.user_id,
-        nickname:
-          event.sender?.nickname ?? String(event.user_id),
-        raw_message: stringifyMessage(event.message),
-        time: event.time,
-        ...(msgType === "group" ? { group_id: groupId } : {}),
-      };
+    client.em = (name = "", data?: unknown) => {
+      originalEm(name, data);
+      if (!name) return;
+      this.pushClientEvent(name, data);
+    };
+  }
 
-      // Push to webhook
-      void this.pushWebhook({ event: "message", data: eventData });
+  private pushClientEvent(eventName: string, rawData: unknown) {
+    const eventData = serializeIcqqEvent(rawData);
 
-      // Push system notification
-      if (this.notifyEnabled) {
-        const sender = eventData.nickname;
-        const body = renderDisplayMessage(eventData.raw_message);
-        if (msgType === "group") {
-          const groupName =
-            this.client.gl.get(targetId)?.group_name ?? String(targetId);
-          sendNotification({
-            title: groupName,
-            subtitle: sender,
-            body,
-          });
-        } else {
-          sendNotification({
-            title: sender,
-            body,
-          });
-        }
+    void this.pushWebhook({ event: eventName, data: eventData });
+
+    if (this.notifyEnabled) {
+      this.maybeNotifyMessage(eventName, eventData);
+    }
+
+    for (const [socketId, subs] of this.subscriptions.entries()) {
+      const socket = this.sockets.get(socketId);
+      if (!socket || socket.destroyed) continue;
+      for (const sub of subs) {
+        this.sendToSocket(socket, {
+          id: sub.reqId,
+          event: eventName,
+          data: eventData,
+        });
       }
+    }
+  }
 
-      // Push to IPC subscribers
-      for (const [socketId, subs] of this.subscriptions.entries()) {
-        for (const sub of subs) {
-          if (sub.type === msgType && sub.id === targetId) {
-            const socket = this.sockets.get(socketId);
-            if (socket && !socket.destroyed) {
-              const evt: IpcMessage = {
-                id: sub.reqId,
-                event: "message",
-                data: eventData,
-              };
-              this.sendToSocket(socket, evt);
-            }
-          }
-        }
-      }
-    });
+  /** 桌面通知：仅对聊天消息触发（与 entry.ts 中其他通知互补） */
+  private maybeNotifyMessage(eventName: string, eventData: unknown) {
+    if (!eventName.startsWith("message")) return;
+    const data = eventData as Record<string, unknown>;
+    const rawMessage = data.raw_message;
+    if (typeof rawMessage !== "string" || !rawMessage) return;
 
-    // Guild (channel) message forwarding
-    this.client.on("message.guild" as any, (event: any) => {
-      const channelId = event.channel_id as string;
-      const eventData = {
-        type: "guild" as const,
-        guild_id: event.guild_id as string,
-        guild_name: event.guild_name as string,
-        channel_id: channelId,
-        channel_name: event.channel_name as string,
-        nickname: event.sender?.nickname ?? "",
-        tiny_id: event.sender?.tiny_id ?? "",
-        raw_message: event.raw_message ?? "",
-        time: event.time ?? Math.floor(Date.now() / 1000),
-        seq: event.seq,
-      };
+    const sender = this.displayNickname(data);
+    const body = renderDisplayMessage(rawMessage);
+    const msgType = data.message_type;
 
-      void this.pushWebhook({ event: "message", data: eventData });
+    if (msgType === "group") {
+      const groupId = Number(data.group_id);
+      const groupName =
+        this.client.gl.get(groupId)?.group_name ?? String(groupId);
+      sendNotification({
+        title: groupName,
+        subtitle: sender,
+        body,
+      });
+      return;
+    }
 
-      for (const [socketId, subs] of this.subscriptions.entries()) {
-        for (const sub of subs) {
-          if (sub.type === "guild" && sub.id === channelId) {
-            const socket = this.sockets.get(socketId);
-            if (socket && !socket.destroyed) {
-              this.sendToSocket(socket, {
-                id: sub.reqId,
-                event: "message",
-                data: eventData,
-              });
-            }
-          }
-        }
-      }
-    });
+    if (msgType === "private") {
+      sendNotification({ title: sender, body });
+    }
+  }
 
-    // ── 账号状态变更通知 ──
-    this.client.on("system.online", () => {
-      void this.pushWebhook({ event: "system.online", data: { uin: this.client.uin } });
-      if (this.notifyEnabled) {
-        sendNotification({ title: "icqq", body: `账号 ${this.client.uin} 已上线` });
-      }
-    });
-
-    this.client.on("system.offline" as any, (event: any) => {
-      const reason = event?.message ?? "未知原因";
-      void this.pushWebhook({ event: "system.offline", data: { uin: this.client.uin, reason } });
-      if (this.notifyEnabled) {
-        sendNotification({ title: "icqq · 账号离线", body: `${this.client.uin} 已离线: ${reason}` });
-      }
-    });
-
-    this.client.on("system.login.error" as any, (event: any) => {
-      const message = event?.message ?? "登录异常";
-      if (this.notifyEnabled) {
-        sendNotification({ title: "icqq · 登录异常", body: `${this.client.uin}: ${message}` });
-      }
-    });
+  private displayNickname(data: Record<string, unknown>): string {
+    const sender = data.sender as Record<string, unknown> | undefined;
+    return String(
+      sender?.card ?? sender?.nickname ?? data.user_id ?? data.from_id ?? "?",
+    );
   }
 
   private sendToSocket(socket: net.Socket, msg: IpcMessage) {
     if (!socket.destroyed) {
-      socket.write(JSON.stringify(msg) + "\n");
+      socket.write(JSON.stringify(msg, icqqEventJsonReplacer) + "\n");
     }
   }
 
@@ -399,10 +360,10 @@ export class DaemonServer {
     req: IpcRequest,
   ) {
     if (req.action === Actions.SUBSCRIBE) {
-      const type = req.params.type as "group" | "private" | "guild";
-      const id = type === "guild" ? String(req.params.id) : Number(req.params.id);
       const subs = this.subscriptions.get(socketId) ?? [];
-      subs.push({ type, id, reqId: req.id });
+      if (!subs.some((s) => s.reqId === req.id)) {
+        subs.push({ reqId: req.id });
+      }
       this.subscriptions.set(socketId, subs);
       this.sendToSocket(socket, {
         id: req.id,
@@ -413,12 +374,11 @@ export class DaemonServer {
     }
 
     if (req.action === Actions.UNSUBSCRIBE) {
-      const type = req.params.type as "group" | "private" | "guild";
-      const id = type === "guild" ? String(req.params.id) : Number(req.params.id);
+      const reqId = req.params.reqId as string | undefined;
       const subs = this.subscriptions.get(socketId) ?? [];
       this.subscriptions.set(
         socketId,
-        subs.filter((s) => !(s.type === type && s.id === id)),
+        reqId ? subs.filter((s) => s.reqId !== reqId) : [],
       );
       this.sendToSocket(socket, {
         id: req.id,
@@ -438,6 +398,25 @@ export class DaemonServer {
               id: req.id,
               ok: false,
               error: "Webhook URL 仅支持 http/https 协议",
+            });
+            return;
+          }
+          // SSRF 防护：拒绝内网/元数据地址
+          const hostname = parsed.hostname;
+          if (
+            hostname === "localhost" ||
+            hostname === "127.0.0.1" ||
+            hostname === "::1" ||
+            hostname === "0.0.0.0" ||
+            hostname.startsWith("169.254.") ||
+            hostname.startsWith("10.") ||
+            hostname.startsWith("192.168.") ||
+            /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+          ) {
+            this.sendToSocket(socket, {
+              id: req.id,
+              ok: false,
+              error: "不允许使用内网或元数据地址作为 Webhook",
             });
             return;
           }

@@ -36,19 +36,17 @@ type Column = {
 /** Truncate string to fit within maxWidth display columns, appending … if clipped */
 function truncate(str: string, maxWidth: number): string {
   if (maxWidth <= 0) return "";
+  const chars = [...str];
   let w = 0;
-  let i = 0;
-  for (const char of str) {
-    const cw = isCJK(char.codePointAt(0)!) ? 2 : 1;
-    if (w + cw > maxWidth - 1 && i < [...str].length - 1) {
-      // Need truncation — leave room for …
-      return [...str].slice(0, i).join("") + "…";
+  for (let i = 0; i < chars.length; i++) {
+    const cw = isCJK(chars[i]!.codePointAt(0)!) ? 2 : 1;
+    if (w + cw > maxWidth - 1 && i < chars.length - 1) {
+      return chars.slice(0, i).join("") + "…";
     }
     w += cw;
-    if (w >= maxWidth && i < [...str].length - 1) {
-      return [...str].slice(0, i + 1).join("") + "…";
+    if (w >= maxWidth && i < chars.length - 1) {
+      return chars.slice(0, i + 1).join("") + "…";
     }
-    i++;
   }
   return str;
 }

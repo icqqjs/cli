@@ -138,8 +138,19 @@ export async function stopDaemon(uin: number): Promise<boolean> {
 
   try {
     process.kill(pid, "SIGTERM");
-    // 等待 1.5s 让守护进程完成清理（断开连接、删除 pid/token 文件）
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // 轮询等待进程退出，最多 5s
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      try {
+        process.kill(pid, 0);
+      } catch {
+        // 进程已退出
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+
     try {
       await fs.unlink(getPidPath(uin));
     } catch {

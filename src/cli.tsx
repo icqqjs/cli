@@ -1,11 +1,10 @@
-import Pastel from "pastel";
-import { createRequire } from "node:module";
+import { installPnpmReactResolveHook } from "./lib/pnpm-react-resolve.js";
+import { isVersionArgv, printCliVersion } from "./lib/cli-version.js";
 
-// Extract global --version / -V flag
-if (process.argv.includes("--version") || process.argv.includes("-V")) {
-  const require = createRequire(import.meta.url);
-  const { version } = require("../package.json") as { version: string };
-  console.log(version);
+installPnpmReactResolveHook();
+
+if (isVersionArgv(process.argv)) {
+  printCliVersion(import.meta.url);
   process.exit(0);
 }
 
@@ -22,6 +21,8 @@ if (jsonIdx !== -1) {
   process.env.ICQQ_JSON_OUTPUT = "1";
   process.argv.splice(jsonIdx, 1);
 }
+
+const { default: Pastel } = await import("pastel");
 
 const app = new Pastel({
   importMeta: import.meta,

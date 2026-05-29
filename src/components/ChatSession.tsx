@@ -7,6 +7,10 @@ import { useAtMode } from "./chat/useAtMode.js";
 import { useEmojiMode } from "./chat/useEmojiMode.js";
 import { useFileMode, tagColor, tagLabel } from "./chat/useFileMode.js";
 import { renderDisplayMessage } from "@/lib/parse-message.js";
+import {
+  chatMessageFromEventData,
+  isChatMessageEvent,
+} from "@/lib/ipc-event-filter.js";
 
 type Message = {
   nickname: string;
@@ -67,14 +71,10 @@ export function ChatSession({ ipc, type, id }: Props) {
       Actions.SUBSCRIBE,
       { type, id },
       (event: IpcEvent) => {
-        if (event.event === "message") {
-          const data = event.data as any;
-          setMessages((prev) => [
-            ...prev.slice(-100),
-            { nickname: data.nickname, content: data.raw_message, time: data.time },
-          ]);
-          setShowHelp(false); // 收到消息后自动隐藏帮助
-        }
+        if (!isChatMessageEvent(event, type, id)) return;
+        const msg = chatMessageFromEventData(event.data as Record<string, unknown>);
+        setMessages((prev) => [...prev.slice(-100), msg]);
+        setShowHelp(false);
       },
     );
     return () => { void sub.unsubscribe(); };

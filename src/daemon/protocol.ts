@@ -7,7 +7,7 @@
  * 通信流程：
  *   1. CLI 连接 Socket → 发送 auth 请求（携带 token）
  *   2. 认证通过后发送 IpcRequest → 等待 IpcResponse
- *   3. 可通过 SUBSCRIBE 订阅消息推送，以 IpcEvent 接收
+ *   3. 可通过 SUBSCRIBE 订阅 icqq 事件推送，以 IpcEvent 接收（client.em 分发的全部事件）
  *
  * @module protocol
  */
@@ -34,13 +34,13 @@ export type IpcResponse = {
   error?: string;
 };
 
-/** Daemon → CLI 事件推送（订阅的消息等） */
+/** Daemon → CLI 事件推送（icqq client.em 分发的全部事件） */
 export type IpcEvent = {
   /** 订阅时的请求 id，用于路由到对应 handler */
   id: string;
-  /** 事件类型，如 "message" */
+  /** icqq 事件名，如 message.group.normal、notice.friend.recall */
   event: string;
-  /** 事件数据 */
+  /** icqq 事件 toJSON 后的完整 plain object（不含 function / Client 等类实例） */
   data: unknown;
 };
 
@@ -349,9 +349,9 @@ export const Actions = {
   GET_PTT_URL: "get_ptt_url",
 
   // ── 消息订阅 ──
-  /** 订阅消息推送。参数: type(group|private), id → 后续以 IpcEvent 推送 */
+  /** 订阅 icqq 事件推送（client.em 分发的全部事件） */
   SUBSCRIBE: "subscribe",
-  /** 取消订阅。参数: type, id */
+  /** 取消订阅。参数: reqId（subscribe 返回的 id） */
   UNSUBSCRIBE: "unsubscribe",
 
   // ── 文件传输 ──

@@ -5,6 +5,10 @@ import type { IpcEvent } from "@/daemon/protocol.js";
 import { Actions } from "@/daemon/protocol.js";
 import { useEmojiMode } from "./chat/useEmojiMode.js";
 import { renderDisplayMessage } from "@/lib/parse-message.js";
+import {
+  guildMessageFromEventData,
+  isGuildChannelMessageEvent,
+} from "@/lib/ipc-event-filter.js";
 
 type Message = {
   nickname: string;
@@ -38,14 +42,10 @@ export function ChannelChatSession({ ipc, guildId, channelId, channelName }: Pro
       Actions.SUBSCRIBE,
       { type: "guild", id: channelId },
       (event: IpcEvent) => {
-        if (event.event === "message") {
-          const data = event.data as any;
-          setMessages((prev) => [
-            ...prev.slice(-100),
-            { nickname: data.nickname, content: data.raw_message, time: data.time },
-          ]);
-          setShowHelp(false);
-        }
+        if (!isGuildChannelMessageEvent(event, channelId)) return;
+        const msg = guildMessageFromEventData(event.data as Record<string, unknown>);
+        setMessages((prev) => [...prev.slice(-100), msg]);
+        setShowHelp(false);
       },
     );
     return () => { void sub.unsubscribe(); };

@@ -240,15 +240,12 @@ export class IpcClient {
   }
 
   /**
-   * 订阅消息推送（用于实时聊天）。
-   * @param action - 通常为 Actions.SUBSCRIBE
-   * @param params - { type: "group"|"private", id: number }
-   * @param onEvent - 收到推送消息时的回调
-   * @returns 订阅句柄，包含 unsubscribe() 方法
+   * 订阅 icqq 事件推送。
+   * params 可留空；服务端推送 client 经 em() 分发的全部事件，由 onEvent 自行过滤。
    */
   subscribe(
     action: string,
-    params: Record<string, unknown>,
+    params: Record<string, unknown> = {},
     onEvent: (event: IpcEvent) => void,
   ): { id: string; unsubscribe: () => Promise<void> } {
     const id = randomUUID();
@@ -263,7 +260,7 @@ export class IpcClient {
         const unsub: IpcRequest = {
           id: randomUUID(),
           action: "unsubscribe",
-          params,
+          params: { reqId: id },
         };
         this.socket.write(JSON.stringify(unsub) + "\n");
       },

@@ -28,6 +28,7 @@ export function IpcCommand({ action, params, render, loadingText }: Props) {
         if (!resp.ok) throw new Error(resp.error ?? "请求失败");
         setData(resp.data);
       } catch (e) {
+        try { ipc.close(); } catch { /* already closed */ }
         setError(e instanceof Error ? e.message : String(e));
       }
       setLoading(false);
