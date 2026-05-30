@@ -19,6 +19,10 @@ const PKG_JSON = "@icqqjs/icqq/package.json";
 
 let _mod: typeof import("@icqqjs/icqq") | null = null;
 
+function shouldSkipDirectImport(): boolean {
+  return process.env.ICQQ_RESOLVE_SKIP_DIRECT_IMPORT === "1";
+}
+
 function getPnpmHomes(): string[] {
   const homes: string[] = [];
   if (process.env.PNPM_HOME) homes.push(process.env.PNPM_HOME);
@@ -75,7 +79,6 @@ function queryPackageManagerGlobalRoot(command: string): string | null {
 export function collectGlobalNodeModulesRoots(): string[] {
   const roots = new Set<string>();
 
-  addCliAncestorNodeModules(roots);
   addPnpmGlobalRoots(roots);
   addArgvGlobalRoot(roots);
 
@@ -83,6 +86,8 @@ export function collectGlobalNodeModulesRoots(): string[] {
     const root = queryPackageManagerGlobalRoot(cmd);
     if (root) roots.add(root);
   }
+
+  addCliAncestorNodeModules(roots);
 
   return [...roots];
 }
@@ -118,11 +123,13 @@ async function importEntry(entryPath: string): Promise<typeof import("@icqqjs/ic
 export async function resolveIcqq(): Promise<typeof import("@icqqjs/icqq")> {
   if (_mod) return _mod;
 
-  try {
-    _mod = await import(PKG);
-    return _mod as typeof import("@icqqjs/icqq");
-  } catch {
-    /* pnpm 全局等场景下继续从全局 node_modules 解析 */
+  if (!shouldSkipDirectImport()) {
+    try {
+      _mod = await import(PKG);
+      return _mod as typeof import("@icqqjs/icqq");
+    } catch {
+      /* pnpm 全局等场景下继续从全局 node_modules 解析 */
+    }
   }
 
   const roots = collectGlobalNodeModulesRoots();

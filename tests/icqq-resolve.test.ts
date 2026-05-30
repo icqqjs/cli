@@ -106,6 +106,7 @@ describe("icqq-resolve", () => {
     const globalNm = path.join(tmp, "global", "5", "node_modules");
     const pkgDir = createFakeIcqqPackage(globalNm, "global-fallback");
     setEnv("PNPM_HOME", tmp);
+    setEnv("ICQQ_RESOLVE_SKIP_DIRECT_IMPORT", "1");
 
     const { getIcqqPath, isIcqqAvailable, resolveIcqq } = await loadModule();
 
