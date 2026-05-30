@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "node .github/hooks/pre-commit-tests.mjs",
+        "timeout": 20
+      }
+    ]
+  }
+}

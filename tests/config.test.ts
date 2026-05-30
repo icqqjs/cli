@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock fs/promises before importing config
 vi.mock("node:fs/promises", () => ({
@@ -10,7 +10,15 @@ vi.mock("node:fs/promises", () => ({
 }));
 
 import fs from "node:fs/promises";
-import { loadConfig, getAccountConfig, setAccountConfig } from "../src/lib/config.ts";
+import {
+  loadConfig,
+  getAccountConfig,
+  setAccountConfig,
+  saveConfig,
+  resolveRpcConfig,
+  resolveMcpConfig,
+  resolveUin,
+} from "../src/lib/config.ts";
 
 describe("loadConfig", () => {
   beforeEach(() => {
@@ -77,5 +85,112 @@ describe("setAccountConfig", () => {
     const config = { accounts: {} as Record<string, any> };
     setAccountConfig(config, 123, { platform: 3, signApiUrl: "https://sign.test" });
     expect(config.accounts["123"]).toEqual({ platform: 3, signApiUrl: "https://sign.test" });
+  });
+});
+
+describe("saveConfig", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("creates home dir and writes config with trailing newline", async () => {
+    const config = { currentUin: 12345, accounts: {} };
+
+    await saveConfig(config);
+
+    expect(fs.mkdir).toHaveBeenCalledWith(expect.stringContaining(".icqq"), {
+      recursive: true,
+      mode: 0o700,
+    });
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      expect.stringContaining("config.json"),
+      JSON.stringify(config, null, 2) + "\n",
+      { mode: 0o600 },
+    );
+  });
+});
+
+describe("resolveRpcConfig", () => {
+  it("fills defaults", () => {
+    expect(resolveRpcConfig()).toEqual({
+      enabled: false,
+      host: "127.0.0.1",
+      port: 0,
+    });
+  });
+
+  it("keeps provided values", () => {
+    expect(resolveRpcConfig({ enabled: true, host: "0.0.0.0", port: 9100 })).toEqual({
+      enabled: true,
+      host: "0.0.0.0",
+      port: 9100,
+    });
+  });
+});
+
+describe("resolveMcpConfig", () => {
+  it("fills defaults", () => {
+    expect(resolveMcpConfig()).toEqual({
+      enabled: false,
+      http: {
+        host: "127.0.0.1",
+        port: 0,
+        token: undefined,
+      },
+      plugins: undefined,
+    });
+  });
+
+  it("keeps provided values", () => {
+    expect(
+      resolveMcpConfig({
+        enabled: true,
+        http: { host: "0.0.0.0", port: 3920, token: "secret" },
+        plugins: ["plugin-a"],
+      }),
+    ).toEqual({
+      enabled: true,
+      http: {
+        host: "0.0.0.0",
+        port: 3920,
+        token: "secret",
+      },
+      plugins: ["plugin-a"],
+    });
+  });
+});
+
+describe("resolveUin", () => {
+  const originalEnv = process.env.ICQQ_CURRENT_UIN;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.ICQQ_CURRENT_UIN;
+  });
+
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env.ICQQ_CURRENT_UIN;
+    else process.env.ICQQ_CURRENT_UIN = originalEnv;
+  });
+
+  it("prefers ICQQ_CURRENT_UIN env", async () => {
+    process.env.ICQQ_CURRENT_UIN = "24680";
+
+    await expect(resolveUin()).resolves.toBe(24680);
+  });
+
+  it("falls back to currentUin in config", async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify({
+      currentUin: 13579,
+      accounts: {},
+    }));
+
+    await expect(resolveUin()).resolves.toBe(13579);
+  });
+
+  it("throws when no active account exists", async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify({ accounts: {} }));
+
+    await expect(resolveUin()).rejects.toThrow("未找到已登录账号");
   });
 });

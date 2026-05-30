@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
+  availableConfigGetKeysHint,
   getConfigDisplayValue,
   isConfigGetGroup,
   isConfigGetKey,
+  isConfigGetQuery,
   listAllConfigEntries,
   listGroupConfigEntries,
 } from "../src/lib/config-get.js";
@@ -38,5 +40,34 @@ describe("config-get", () => {
     const empty: IcqqConfig = { accounts: {} };
     expect(getConfigDisplayValue(empty, "mcp.http.host")).toBe("127.0.0.1");
     expect(getConfigDisplayValue(empty, "mcp.http.port")).toBe("0 (自动分配)");
+  });
+
+  it("formats empty values and accounts view", () => {
+    const empty: IcqqConfig = { accounts: {} };
+    expect(getConfigDisplayValue(empty, "currentUin")).toBe("(未设置)");
+    expect(getConfigDisplayValue(empty, "webhookUrl")).toBe("(未设置)");
+    expect(getConfigDisplayValue(empty, "accounts")).toBe("(无)");
+    expect(getConfigDisplayValue(empty, "mcp.plugins")).toBe("(无)");
+    expect(getConfigDisplayValue(empty, "mcp.http.token")).toBe("(未设置)");
+  });
+
+  it("formats configured accounts and plugins", () => {
+    const rich: IcqqConfig = {
+      accounts: {
+        "10001": { platform: 1, signApiUrl: "https://a.example.com" },
+        "10002": { platform: 2, signApiUrl: "https://b.example.com" },
+      },
+      mcp: { plugins: ["plugin-a", "plugin-b"] },
+    };
+    expect(getConfigDisplayValue(rich, "accounts")).toContain("10001");
+    expect(getConfigDisplayValue(rich, "mcp.plugins")).toBe("plugin-a, plugin-b");
+  });
+
+  it("supports query helpers and hint list", () => {
+    expect(isConfigGetQuery("rpc")).toBe(true);
+    expect(isConfigGetQuery("rpc.port")).toBe(true);
+    expect(isConfigGetQuery("not-real")).toBe(false);
+    expect(availableConfigGetKeysHint()).toContain("mcp.http.port");
+    expect(availableConfigGetKeysHint()).toContain("rpc");
   });
 });

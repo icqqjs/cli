@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ICQQ_EVENT_JSON_OMIT_KEYS,
+  icqqEventJsonReplacer,
   serializeIcqqEvent,
 } from "../src/lib/serialize-icqq-event.js";
 
@@ -67,5 +68,26 @@ describe("serializeIcqqEvent", () => {
     expect(ICQQ_EVENT_JSON_OMIT_KEYS).toContain("client");
     expect(ICQQ_EVENT_JSON_OMIT_KEYS).toContain("proto");
     expect(ICQQ_EVENT_JSON_OMIT_KEYS).toContain("group");
+  });
+
+  it("serializes arrays, buffers, and circular references safely", () => {
+    const circular: Record<string, unknown> = {
+      list: [1n, Buffer.from("hi")],
+    };
+    circular.self = circular;
+
+    expect(serializeIcqqEvent(circular)).toEqual({
+      list: ["1", { type: "Buffer", data: Buffer.from("hi").toString("base64") }],
+      self: undefined,
+    });
+  });
+
+  it("provides JSON replacer for bigint and buffer", () => {
+    expect(icqqEventJsonReplacer("id", 123n)).toBe("123");
+    expect(icqqEventJsonReplacer("buf", Buffer.from("ok"))).toEqual({
+      type: "Buffer",
+      data: Buffer.from("ok").toString("base64"),
+    });
+    expect(icqqEventJsonReplacer("plain", "text")).toBe("text");
   });
 });
