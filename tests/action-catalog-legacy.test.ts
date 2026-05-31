@@ -1,4 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
+vi.mock("../src/lib/icqq-resolve.js", () => ({
+  resolveIcqq: async () => ({
+    parseGroupMessageId(messageId: string) {
+      const buf = Buffer.from(messageId, "base64");
+      return {
+        group_id: buf.readUInt32BE(0),
+        user_id: buf.readUInt32BE(4),
+        seq: buf.readUInt32BE(8),
+        rand: buf.readUInt32BE(12),
+        time: buf.readUInt32BE(16),
+        pktnum: buf.readUInt8(20),
+      };
+    },
+  }),
+}));
+
 import { Actions } from "../src/daemon/protocol.js";
 import { getActionCatalogEntry } from "../src/daemon/action-catalog.js";
 
