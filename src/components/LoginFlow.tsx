@@ -20,6 +20,8 @@ type Props = {
   dataDir: string;
   uin?: number;
   password?: string;
+  /** 用户选择扫码登录（无密码）时跳过 token，直接拉二维码 */
+  qrOnly?: boolean;
   onComplete: () => void;
   onError: (err: Error) => void;
 };
@@ -29,6 +31,7 @@ export function LoginFlow({
   dataDir,
   uin,
   password,
+  qrOnly = false,
   onComplete,
   onError,
 }: Props) {
@@ -131,12 +134,12 @@ export function LoginFlow({
       try {
         if (uin && password) {
           await client.login(uin, password);
-        } else if (uin) {
-          setDetail("尝试 token 登录，若 token 过期将跳转验证…");
-          await client.login(uin);
-        } else {
+        } else if (qrOnly || !uin) {
           setDetail("等待扫码登录…");
           await client.login();
+        } else {
+          setDetail("尝试 token 登录，若 token 过期将跳转验证…");
+          await client.login(uin);
         }
       } catch (e) {
         if (!disposedRef.current) {

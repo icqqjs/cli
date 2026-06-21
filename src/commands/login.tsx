@@ -211,7 +211,7 @@ function WizardPrompt({
   for (let i = 0; i < stepIdx; i++) {
     const s = steps[i]!;
     if (s === "qq") completedEntries.push(["QQ号", qq || "(扫码登录)"]);
-    if (s === "ask_password") completedEntries.push(["密码登录", wantPassword ? "是" : "否"]);
+    if (s === "ask_password") completedEntries.push(["登录方式", wantPassword ? "密码" : "扫码"]);
     if (s === "password") completedEntries.push(["密码", "●".repeat(password.length || 1)]);
     if (s === "platform") {
       const p = PLATFORMS.find((x) => x.value === platform);
@@ -221,7 +221,7 @@ function WizardPrompt({
     if (s === "sign_api") completedEntries.push(["签名API", signApiUrl || "(无)"]);
   }
 
-  const ASK_PW_OPTIONS = ["是", "否"] as const;
+  const ASK_PW_OPTIONS = ["密码登录", "扫码登录"] as const;
 
   return (
     <Box flexDirection="column" paddingX={1}>
@@ -251,7 +251,7 @@ function WizardPrompt({
 
       {currentStep === "ask_password" && (
         <Box marginTop={1} flexDirection="column">
-          <Text>是否使用密码登录？ <Text dimColor>(↑↓选择, 回车确认)</Text></Text>
+          <Text>登录方式 <Text dimColor>(↑↓选择, 回车确认)</Text></Text>
           {ASK_PW_OPTIONS.map((label, i) => (
             <Text key={label}>
               <Text color={i === askPwIdx ? "cyan" : undefined}>
@@ -413,7 +413,11 @@ export default function Login({ options: opts }: Props) {
 
     setStatus("login");
 
-    const dir = merged.qq ? getAccountDir(merged.qq) : getTmpDir();
+    // 扫码登录走临时目录，避免账号目录里残留 token 导致先卡 token 登录
+    const dir =
+      merged.password && merged.qq
+        ? getAccountDir(merged.qq)
+        : getTmpDir();
     await fs.mkdir(dir, { recursive: true });
     const { createClient } = await resolveIcqq();
     const c = createClient({
@@ -433,9 +437,9 @@ export default function Login({ options: opts }: Props) {
     setStatus("post-login");
 
     try {
-      // If no uin was given, move data from tmp dir to account dir
-      if (!finalOpts.qq) {
-        const tmpDir = getTmpDir();
+      // 扫码登录使用临时目录，成功后迁入正式账号目录
+      const tmpDir = getTmpDir();
+      if (path.resolve(dataDir) === path.resolve(tmpDir)) {
         const accountDir = getAccountDir(actualUin);
         await fs.mkdir(accountDir, { recursive: true });
         for (const entry of await fs.readdir(tmpDir, {
@@ -515,6 +519,7 @@ export default function Login({ options: opts }: Props) {
           dataDir={dataDir}
           uin={finalOpts.qq}
           password={finalOpts.password}
+          qrOnly={!finalOpts.password}
           onComplete={() => void handleLoginComplete()}
           onError={handleLoginError}
         />
