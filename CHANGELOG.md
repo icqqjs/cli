@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/icqqjs/cli/compare/v1.9.0...v1.9.1) (2026-06-24)
+
+
+### Bug Fixes
+
+* add daemon orphan status and improve service management ([c8a75dd](https://github.com/icqqjs/cli/commit/c8a75dd9fd1353db49fde1049e0b71e259d67918))
+
 ## [1.9.0](https://github.com/icqqjs/cli/compare/v1.8.4...v1.9.0) (2026-06-24)
 
 
