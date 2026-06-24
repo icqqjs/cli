@@ -46,7 +46,7 @@
 
 ### Issue tracker
 
-Issues are tracked in GitHub Issues for this repository. See `docs/agents/issue-tracker.md`.
+Issues are tracked in GitHub Issues for this repository; external PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
