@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Text } from "ink";
 import zod from "zod";
 import { argument, option } from "pastel";
 import { IpcMutate } from "@/components/IpcCommand.js";
@@ -36,7 +37,9 @@ export default function ChannelShare({ args: [guildId, channelId, url, title], o
 
   if (!selectedGuild) return <GuildSelector onSelect={setSelectedGuild} />;
   if (!selectedChannel) return <ChannelSelector guildId={selectedGuild} onSelect={setSelectedChannel} />;
-  if (!url || !title) return null;
+  if (!url || !title) {
+    return <Text color="yellow">请提供 url 与 title 参数</Text>;
+  }
 
   return (
     <IpcMutate

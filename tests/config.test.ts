@@ -17,7 +17,10 @@ import {
   saveConfig,
   resolveRpcConfig,
   resolveMcpConfig,
+  resolveMcpConfigForUin,
+  resolveRpcConfigForUin,
   resolveUin,
+  resolveConfigScopeUin,
 } from "../src/lib/config.ts";
 
 describe("loadConfig", () => {
@@ -157,6 +160,75 @@ describe("resolveMcpConfig", () => {
       },
       plugins: ["plugin-a"],
     });
+  });
+});
+
+describe("resolveMcpConfigForUin", () => {
+  it("merges global switches with account ports only from account", () => {
+    const config = {
+      mcp: {
+        enabled: true,
+        http: { host: "127.0.0.1", port: 61500, token: "global" },
+      },
+      rpc: { enabled: false, host: "127.0.0.1", port: 9000 },
+      accounts: {
+        "8596238": {
+          platform: 3,
+          signApiUrl: "https://sign.example.com",
+          mcp: { http: { port: 61501 } },
+          rpc: { enabled: true, port: 9001 },
+        },
+      },
+    };
+
+    expect(resolveMcpConfigForUin(config, 8596238)).toEqual({
+      enabled: true,
+      http: { host: "127.0.0.1", port: 61501, token: "global" },
+      plugins: undefined,
+    });
+    expect(resolveRpcConfigForUin(config, 8596238)).toEqual({
+      enabled: true,
+      host: "127.0.0.1",
+      port: 9001,
+    });
+  });
+
+  it("uses port 0 when account has no port", () => {
+    const config = {
+      mcp: { enabled: true, http: { host: "127.0.0.1", port: 61500 } },
+      accounts: {
+        "123": { platform: 3, signApiUrl: "https://sign.example.com" },
+      },
+    };
+    expect(resolveMcpConfigForUin(config, 123).http.port).toBe(0);
+  });
+});
+
+describe("resolveConfigScopeUin", () => {
+  const originalEnv = process.env.ICQQ_CURRENT_UIN;
+
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env.ICQQ_CURRENT_UIN;
+    else process.env.ICQQ_CURRENT_UIN = originalEnv;
+  });
+
+  it("returns undefined when env is unset", () => {
+    delete process.env.ICQQ_CURRENT_UIN;
+    expect(resolveConfigScopeUin()).toBeUndefined();
+  });
+
+  it("returns parsed uin from ICQQ_CURRENT_UIN", () => {
+    process.env.ICQQ_CURRENT_UIN = "12345";
+    expect(resolveConfigScopeUin()).toBe(12345);
+  });
+
+  it("returns undefined for invalid env values", () => {
+    process.env.ICQQ_CURRENT_UIN = "abc";
+    expect(resolveConfigScopeUin()).toBeUndefined();
+    process.env.ICQQ_CURRENT_UIN = "0";
+    expect(resolveConfigScopeUin()).toBeUndefined();
+    process.env.ICQQ_CURRENT_UIN = "-1";
+    expect(resolveConfigScopeUin()).toBeUndefined();
   });
 });
 

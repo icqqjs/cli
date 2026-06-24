@@ -9,12 +9,16 @@
 import fs from "node:fs/promises";
 import { getConfigPath, getIcqqHome } from "./paths.js";
 
-/** 单个账号的配置 */
+/** 单个账号的配置（platform/signApiUrl 由 login 写入；rpc/mcp 可单独覆盖全局） */
 export interface AccountConfig {
   platform: number;
   signApiUrl: string;
   ver?: string;
   logLevel?: string;
+  /** 覆盖全局 rpc（未设字段继承 config.rpc） */
+  rpc?: Partial<RpcConfig>;
+  /** 覆盖全局 mcp（未设字段继承 config.mcp） */
+  mcp?: Omit<Partial<McpConfig>, "http"> & { http?: Partial<McpHttpConfig> };
 }
 
 /** RPC（TCP 远程连接）配置 */
@@ -56,7 +60,7 @@ export interface IcqqConfig {
   /** RPC TCP 远程连接配置 */
   rpc?: Partial<RpcConfig>;
   /** MCP HTTP 配置 */
-  mcp?: Partial<McpConfig> & { http?: Partial<McpHttpConfig> };
+  mcp?: Omit<Partial<McpConfig>, "http"> & { http?: Partial<McpHttpConfig> };
   /** 各账号配置，key 为 QQ 号字符串 */
   accounts: Record<string, AccountConfig>;
 }
@@ -107,7 +111,7 @@ export function resolveRpcConfig(partial?: Partial<RpcConfig>): RpcConfig {
   };
 }
 
-/** 解析 MCP 配置，填充默认值 */
+/** 解析 MCP 配置，填充默认值（partial 可含 port，全局层不应传入 port） */
 export function resolveMcpConfig(
   partial?: IcqqConfig["mcp"],
 ): ResolvedMcpConfig {
@@ -120,6 +124,53 @@ export function resolveMcpConfig(
     },
     plugins: partial?.plugins,
   };
+}
+
+/**
+ * 合并全局与账号 MCP：enabled/token/host/plugins 继承全局；
+ * **端口仅来自账号配置**（全局 port 不参与）。
+ */
+export function resolveMcpConfigForUin(
+  config: IcqqConfig,
+  uin: number,
+): ResolvedMcpConfig {
+  const global = config.mcp;
+  const account = config.accounts[String(uin)]?.mcp;
+  return {
+    enabled: account?.enabled ?? global?.enabled ?? false,
+    http: {
+      host: account?.http?.host ?? global?.http?.host ?? "127.0.0.1",
+      port: account?.http?.port ?? 0,
+      token: account?.http?.token ?? global?.http?.token,
+    },
+    plugins: account?.plugins ?? global?.plugins,
+  };
+}
+
+/**
+ * 合并全局与账号 RPC：enabled/host 继承全局；
+ * **端口仅来自账号配置**。
+ */
+export function resolveRpcConfigForUin(
+  config: IcqqConfig,
+  uin: number,
+): RpcConfig {
+  const global = config.rpc;
+  const account = config.accounts[String(uin)]?.rpc;
+  return {
+    enabled: account?.enabled ?? global?.enabled ?? false,
+    host: account?.host ?? global?.host ?? "127.0.0.1",
+    port: account?.port ?? 0,
+  };
+}
+
+/** `-u` / ICQQ_CURRENT_UIN：config set/get 的账号作用域 */
+export function resolveConfigScopeUin(): number | undefined {
+  const envUin = process.env.ICQQ_CURRENT_UIN;
+  if (!envUin) return undefined;
+  const n = Number(envUin);
+  if (Number.isNaN(n) || n <= 0) return undefined;
+  return n;
 }
 
 /**

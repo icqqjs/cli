@@ -13,7 +13,7 @@ import {
   type ServiceState,
 } from "./_helpers.js";
 import { readMcpEndpoint, formatMcpUrl } from "@/lib/paths.js";
-import { resolveMcpConfig, loadConfig } from "@/lib/config.js";
+import { resolveMcpConfigForUin, loadConfig } from "@/lib/config.js";
 import { getDaemonPid, isDaemonRunning } from "@/daemon/lifecycle.js";
 
 export const description = "查看系统服务状态（默认全部已配置账号；可指定 QQ 号）";
@@ -42,7 +42,9 @@ function StatusLine({ s }: { s: AccountStatus }) {
     ? s.running
       ? "服务:运行中"
       : "服务:已停止"
-    : "服务:未安装";
+    : s.daemonRunning
+      ? "服务:未安装(手动守护)"
+      : "服务:未安装";
   const daemon = s.daemonRunning
     ? `守护:运行中${s.daemonPid ? ` PID:${s.daemonPid}` : ""}`
     : "守护:未运行";
@@ -53,7 +55,7 @@ function StatusLine({ s }: { s: AccountStatus }) {
         [{s.uin}]
       </Text>
       {" "}
-      <Text color={s.installed ? "green" : "red"}>{svc}</Text>
+      <Text color={s.installed ? "green" : s.daemonRunning ? "yellow" : "red"}>{svc}</Text>
       {s.installed && s.running && s.pid !== null ? (
         <Text dimColor> svcPID:{s.pid}</Text>
       ) : null}
@@ -126,18 +128,18 @@ export default function ServiceStatus({ args: [argUin] }: Props) {
       try {
         const uins = await resolveServiceUins(argUin);
         const config = await loadConfig();
-        const mcpCfg = resolveMcpConfig(config.mcp);
 
         const out: AccountStatus[] = [];
         for (const uin of uins) {
           const svc = await queryService(uin);
+          const mcpCfg = resolveMcpConfigForUin(config, uin);
+          const daemonRunning = await isDaemonRunning(uin);
+          const daemonPid = daemonRunning ? await getDaemonPid(uin) : null;
           let mcpUrl: string | null = null;
-          if (mcpCfg.enabled) {
+          if (mcpCfg.enabled && daemonRunning) {
             const ep = await readMcpEndpoint(uin);
             if (ep) mcpUrl = formatMcpUrl(ep);
           }
-          const daemonRunning = await isDaemonRunning(uin);
-          const daemonPid = daemonRunning ? await getDaemonPid(uin) : null;
           out.push({
             ...svc,
             daemonRunning,
@@ -145,6 +147,15 @@ export default function ServiceStatus({ args: [argUin] }: Props) {
             mcpUrl,
             isCurrent: config.currentUin === uin,
           });
+        }
+
+        const mcpUrls = out.map((s) => s.mcpUrl).filter(Boolean) as string[];
+        const dupMcp =
+          mcpUrls.length > 1 && new Set(mcpUrls).size < mcpUrls.length;
+        if (dupMcp) {
+          for (const row of out) {
+            if (row.mcpUrl) row.mcpUrl = `${row.mcpUrl} ⚠端口冲突/过期`;
+          }
         }
         setResults(out);
       } catch (e) {

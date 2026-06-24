@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Text } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { IpcMutate } from "@/components/IpcCommand.js";
@@ -21,7 +22,13 @@ export default function GuildSend({ args: [guildId, channelId, message] }: Props
 
   if (!selectedGuild) return <GuildSelector onSelect={setSelectedGuild} />;
   if (!selectedChannel) return <ChannelSelector guildId={selectedGuild} onSelect={setSelectedChannel} />;
-  if (!message) return null;
+  if (!message) {
+    return (
+      <Text color="yellow">
+        请提供 message 参数，例如: icqq guild channel send &lt;guild_id&gt; &lt;channel_id&gt; &quot;你好&quot;
+      </Text>
+    );
+  }
 
   return (
     <IpcMutate

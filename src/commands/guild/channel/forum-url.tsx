@@ -29,7 +29,9 @@ export default function ForumUrl({ args: [guildId, channelId, forumId] }: Props)
 
   if (!selectedGuild) return <GuildSelector onSelect={setSelectedGuild} />;
   if (!selectedChannel) return <ChannelSelector guildId={selectedGuild} onSelect={setSelectedChannel} />;
-  if (!forumId) return null;
+  if (!forumId) {
+    return <Text color="yellow">请提供 forum-id 参数（帖子 ID）</Text>;
+  }
 
   return (
     <IpcCommand

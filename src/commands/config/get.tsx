@@ -3,7 +3,7 @@ import { Text, Box, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
-import { loadConfig } from "@/lib/config.js";
+import { loadConfig, resolveConfigScopeUin } from "@/lib/config.js";
 import {
   availableConfigGetKeysHint,
   getConfigDisplayValue,
@@ -21,7 +21,7 @@ export const args = zod.tuple([
     argument({
       name: "key",
       description:
-        "配置项（不指定则显示全部；可用 mcp、rpc 或 mcp.enabled、mcp.http.port 等）",
+        "配置项（不指定则显示全部；mcp/rpc 配合 -u 查看账号生效值）",
     }),
   ),
 ]);
@@ -40,17 +40,18 @@ export default function ConfigGet({ args: [key] }: Props) {
     void (async () => {
       try {
         const config = await loadConfig();
+        const scopeUin = resolveConfigScopeUin();
 
         if (!key) {
-          setOutput(listAllConfigEntries(config));
+          setOutput(listAllConfigEntries(config, scopeUin));
         } else if (!isConfigGetQuery(key)) {
           throw new Error(
             `未知配置项: ${key}\n可用: ${availableConfigGetKeysHint()}`,
           );
         } else if (isConfigGetGroup(key)) {
-          setOutput(listGroupConfigEntries(config, key));
+          setOutput(listGroupConfigEntries(config, key, scopeUin));
         } else if (isConfigGetKey(key)) {
-          setOutput([[key, getConfigDisplayValue(config, key)]]);
+          setOutput([[key, getConfigDisplayValue(config, key, scopeUin)]]);
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));

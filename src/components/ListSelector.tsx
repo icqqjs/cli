@@ -2,6 +2,7 @@ import React, { useState, useEffect, type ReactNode } from "react";
 import { Text, Box, useInput } from "ink";
 import { Spinner } from "./Spinner.js";
 import { useIpcConnection } from "@/lib/use-ipc-connection.js";
+import { formatCliError } from "@/lib/cli-errors.js";
 import type { IpcClient } from "@/lib/ipc-client.js";
 
 /** 每页显示最多 15 个列表项（适配标准 24 行终端窗口，扣除标题、搜索框、状态栏） */
@@ -31,6 +32,7 @@ function SelectorList<T, ID extends string | number>({
 }) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState("");
   const [index, setIndex] = useState(0);
   const [filter, setFilter] = useState("");
 
@@ -40,8 +42,12 @@ function SelectorList<T, ID extends string | number>({
         const resp = await ipc.request(config.action, config.params ?? {});
         if (resp.ok && Array.isArray(resp.data)) {
           setItems(resp.data as T[]);
+        } else {
+          setFetchError(resp.error ?? "列表加载失败");
         }
-      } catch { /* ignore */ }
+      } catch (e) {
+        setFetchError(e instanceof Error ? e.message : String(e));
+      }
       setLoading(false);
     })();
   }, [ipc, config.action, config.params]);
@@ -85,6 +91,7 @@ function SelectorList<T, ID extends string | number>({
   });
 
   if (loading) return <Spinner label={config.loadingLabel} />;
+  if (fetchError) return <Text color="red">{formatCliError(fetchError)}</Text>;
 
   return (
     <Box flexDirection="column">
@@ -119,7 +126,7 @@ function ListSelectorWithConnection<T, ID extends string | number = number>(
 ) {
   const { ipc, error } = useIpcConnection();
 
-  if (error) return <Text color="red">✖ {error}</Text>;
+  if (error) return <Text color="red">{formatCliError(error)}</Text>;
   if (!ipc) return <Spinner label="连接守护进程…" />;
 
   return <SelectorList ipc={ipc} ownConnection config={props} />;

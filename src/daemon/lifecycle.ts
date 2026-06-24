@@ -17,18 +17,16 @@ import {
   getLogPath,
   getPidPath,
   getSocketPath,
+  getTokenPath,
 } from "@/lib/paths.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export async function isDaemonRunning(uin: number): Promise<boolean> {
+async function isPidAlive(pid: number): Promise<boolean> {
   try {
-    const pidStr = await fs.readFile(getPidPath(uin), "utf-8");
-    const pid = Number(pidStr.trim());
-    if (Number.isNaN(pid)) return false;
     process.kill(pid, 0);
-    return await checkSocket(uin);
+    return true;
   } catch {
     return false;
   }
@@ -38,7 +36,6 @@ function checkSocket(uin: number): Promise<boolean> {
   return new Promise((resolve) => {
     const sockPath = getSocketPath(uin);
     const sock = net.connect(sockPath);
-    // Socket 连接超时 2s，仅用于探测守护进程是否存活
     const timer = setTimeout(() => {
       sock.destroy();
       resolve(false);
@@ -55,12 +52,52 @@ function checkSocket(uin: number): Promise<boolean> {
   });
 }
 
+/** 清理陈旧 pid/socket/token（进程已死或 socket 不可达） */
+export async function janitorStaleDaemonArtifacts(uin: number): Promise<void> {
+  let pid: number | null = null;
+  try {
+    const pidStr = await fs.readFile(getPidPath(uin), "utf-8");
+    const parsed = Number(pidStr.trim());
+    if (!Number.isNaN(parsed)) pid = parsed;
+  } catch {
+    /* no pid file */
+  }
+
+  const socketOk = await checkSocket(uin);
+  const pidAlive = pid !== null && (await isPidAlive(pid));
+
+  if (pidAlive && socketOk) return;
+
+  const paths = [getPidPath(uin), getSocketPath(uin), getTokenPath(uin)];
+  await Promise.all(
+    paths.map((p) =>
+      fs.unlink(p).catch(() => {
+        /* ignore */
+      }),
+    ),
+  );
+}
+
+export async function isDaemonRunning(uin: number): Promise<boolean> {
+  await janitorStaleDaemonArtifacts(uin);
+  try {
+    const pidStr = await fs.readFile(getPidPath(uin), "utf-8");
+    const pid = Number(pidStr.trim());
+    if (Number.isNaN(pid)) return false;
+    if (!(await isPidAlive(pid))) return false;
+    return await checkSocket(uin);
+  } catch {
+    return false;
+  }
+}
+
 export async function getDaemonPid(uin: number): Promise<number | null> {
+  await janitorStaleDaemonArtifacts(uin);
   try {
     const pidStr = await fs.readFile(getPidPath(uin), "utf-8");
     const pid = Number(pidStr.trim());
     if (Number.isNaN(pid)) return null;
-    process.kill(pid, 0);
+    if (!(await isPidAlive(pid))) return null;
     return pid;
   } catch {
     return null;
@@ -68,18 +105,21 @@ export async function getDaemonPid(uin: number): Promise<number | null> {
 }
 
 export async function spawnDaemon(uin: number): Promise<void> {
+  await janitorStaleDaemonArtifacts(uin);
+  if (await isDaemonRunning(uin)) {
+    throw new Error(`账号 ${uin} 的守护进程已在运行中`);
+  }
+
   await fs.mkdir(getAccountDir(uin), { recursive: true, mode: 0o700 });
 
   const logPath = getLogPath(uin);
 
-  // Log rotation: if log exceeds 5MB, rotate to .log.old
-  // 5MB 阈值适用于多数场景，约等于 2–3 天强度使用的日志量
   try {
     const stat = await fs.stat(logPath);
     if (stat.size > 5 * 1024 * 1024) {
       await fs.rename(logPath, logPath + ".old");
     }
-  } catch { /* ignore — file may not exist */ }
+  } catch { /* ignore */ }
 
   const logFd = openSync(logPath, "a");
   const entryPath = path.resolve(__dirname, "entry.js");
@@ -90,7 +130,6 @@ export async function spawnDaemon(uin: number): Promise<void> {
       stdio: ["ignore", logFd, logFd, "ipc"],
     });
 
-    // 30s 等待守护进程启动（包括 QQ 登录、数据加载、Socket 绑定）
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error(`守护进程启动超时。查看日志: ${logPath}`));
@@ -134,35 +173,39 @@ export async function spawnDaemon(uin: number): Promise<void> {
 
 export async function stopDaemon(uin: number): Promise<boolean> {
   const pid = await getDaemonPid(uin);
-  if (pid === null) return false;
+  if (pid === null) {
+    await janitorStaleDaemonArtifacts(uin);
+    return false;
+  }
 
   try {
     process.kill(pid, "SIGTERM");
 
-    // 轮询等待进程退出，最多 5s
     const deadline = Date.now() + 5000;
+    let alive = true;
     while (Date.now() < deadline) {
-      try {
-        process.kill(pid, 0);
-      } catch {
-        // 进程已退出
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      alive = await isPidAlive(pid);
+      if (!alive) break;
+      await new Promise((r) => setTimeout(r, 200));
     }
 
-    try {
-      await fs.unlink(getPidPath(uin));
-    } catch {
-      /* ignore */
+    if (alive) {
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch {
+        /* ignore */
+      }
+      const killDeadline = Date.now() + 2000;
+      while (Date.now() < killDeadline) {
+        if (!(await isPidAlive(pid))) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
     }
-    try {
-      await fs.unlink(getSocketPath(uin));
-    } catch {
-      /* ignore */
-    }
+
+    await janitorStaleDaemonArtifacts(uin);
     return true;
   } catch {
+    await janitorStaleDaemonArtifacts(uin);
     return false;
   }
 }

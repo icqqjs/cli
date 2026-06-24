@@ -3,7 +3,7 @@ import { Text, useApp } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { Spinner } from "@/components/Spinner.js";
-import { loadConfig, saveConfig } from "@/lib/config.js";
+import { loadConfig, saveConfig, resolveConfigScopeUin } from "@/lib/config.js";
 import {
   applyConfigSet,
   CONFIG_SET_KEYS,
@@ -18,7 +18,7 @@ export const args = zod.tuple([
     argument({
       name: "key",
       description:
-        "配置项 (currentUin, webhookUrl, notifyEnabled, mcp.enabled, mcp.http.port, …)",
+        "配置项 (currentUin, webhookUrl, mcp.enabled, mcp.http.port, …)；配合 -u 可设账号级 mcp/rpc",
     }),
   ),
   zod.string().describe(
@@ -38,6 +38,7 @@ export default function ConfigSet({ args: [key, value] }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [scopeUin, setScopeUin] = useState<number | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -50,9 +51,11 @@ export default function ConfigSet({ args: [key, value] }: Props) {
 
         const parsed = parseConfigSetValue(key, value);
         const config = await loadConfig();
-        applyConfigSet(config, key, parsed);
+        const scopeUin = resolveConfigScopeUin();
+        applyConfigSet(config, key, parsed, scopeUin);
         await saveConfig(config);
         setSuccess(true);
+        setScopeUin(scopeUin ?? null);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -74,7 +77,10 @@ export default function ConfigSet({ args: [key, value] }: Props) {
   return (
     <Text color="green">
       ✔ 已设置 {key} = {value}
-      {key.startsWith("mcp.") ? "（执行 icqq service restart 后生效）" : ""}
+      {scopeUin !== null ? `（账号 ${scopeUin}）` : "（全局）"}
+      {key.startsWith("mcp.") || key.startsWith("rpc.")
+        ? "（执行 icqq service restart 后生效）"
+        : ""}
     </Text>
   );
 }

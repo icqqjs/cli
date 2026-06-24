@@ -265,19 +265,38 @@ export class DaemonServer {
         this.handleConnection(socket, "rpc"),
       );
 
-      const { host, port } = this.rpcConfig;
+      const { host, port: configuredPort } = this.rpcConfig;
 
       await new Promise<void>((resolve, reject) => {
-        this.rpcServer!.on("error", (err) => {
-          console.error(`[rpc] TCP 服务启动失败: ${err.message}`);
-          reject(err);
-        });
-        this.rpcServer!.listen(port, host, () => {
-          const addr = this.rpcServer!.address() as net.AddressInfo;
-          this.rpcPort = addr.port;
-          console.log(`[rpc] TCP 服务已启动: ${host}:${this.rpcPort}`);
-          resolve();
-        });
+        const tryListen = (port: number, retried: boolean) => {
+          const server = this.rpcServer!;
+          const onError = (err: NodeJS.ErrnoException) => {
+            server.removeListener("error", onError);
+            if (
+              !retried &&
+              err.code === "EADDRINUSE" &&
+              port !== 0 &&
+              configuredPort !== 0
+            ) {
+              console.warn(
+                `[rpc] 端口 ${port} 已被占用，改为自动分配端口（多账号建议 rpc.port=0）`,
+              );
+              server.close(() => tryListen(0, true));
+              return;
+            }
+            console.error(`[rpc] TCP 服务启动失败: ${err.message}`);
+            reject(err);
+          };
+          server.once("error", onError);
+          server.listen(port, host, () => {
+            server.removeListener("error", onError);
+            const addr = server.address() as net.AddressInfo;
+            this.rpcPort = addr.port;
+            console.log(`[rpc] TCP 服务已启动: ${host}:${this.rpcPort}`);
+            resolve();
+          });
+        };
+        tryListen(configuredPort, false);
       });
 
       await fs.writeFile(

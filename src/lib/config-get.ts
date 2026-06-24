@@ -2,8 +2,17 @@
  * config get 键解析与展示。
  */
 import type { IcqqConfig } from "./config.js";
-import { resolveMcpConfig, resolveRpcConfig } from "./config.js";
-import { CONFIG_SET_KEYS, type ConfigSetKey } from "./config-set.js";
+import {
+  resolveMcpConfig,
+  resolveMcpConfigForUin,
+  resolveRpcConfig,
+  resolveRpcConfigForUin,
+} from "./config.js";
+import {
+  CONFIG_SET_KEYS,
+  isAccountScopedConfigKey,
+  type ConfigSetKey,
+} from "./config-set.js";
 
 /** 与 config set 相同的点分键 */
 export const CONFIG_GET_DOT_KEYS = CONFIG_SET_KEYS.filter(
@@ -48,12 +57,58 @@ function formatToken(token: string | undefined): string {
   return token ?? unset();
 }
 
-/** 列出全部配置项（摘要） */
-export function listAllConfigEntries(config: IcqqConfig): [string, string][] {
-  const mcp = resolveMcpConfig(config.mcp);
-  const rpc = resolveRpcConfig(config.rpc);
+function accountOverrideNote(
+  config: IcqqConfig,
+  uin: number,
+  key: ConfigSetKey,
+): string {
+  if (!isAccountScopedConfigKey(key)) return "";
+  const acc = config.accounts[String(uin)];
+  if (!acc) return "";
 
-  return [
+  switch (key) {
+    case "mcp.enabled":
+      return acc.mcp?.enabled !== undefined ? " [账号覆盖]" : "";
+    case "mcp.http.host":
+      return acc.mcp?.http?.host !== undefined ? " [账号覆盖]" : "";
+    case "mcp.http.port":
+      return acc.mcp?.http?.port !== undefined ? " [账号覆盖]" : "";
+    case "mcp.http.token":
+      return acc.mcp?.http?.token !== undefined ? " [账号覆盖]" : "";
+    case "rpc.enabled":
+      return acc.rpc?.enabled !== undefined ? " [账号覆盖]" : "";
+    case "rpc.host":
+      return acc.rpc?.host !== undefined ? " [账号覆盖]" : "";
+    case "rpc.port":
+      return acc.rpc?.port !== undefined ? " [账号覆盖]" : "";
+    default:
+      return "";
+  }
+}
+
+function resolveScopedMcpRpc(config: IcqqConfig, uin?: number) {
+  if (uin !== undefined) {
+    return {
+      mcp: resolveMcpConfigForUin(config, uin),
+      rpc: resolveRpcConfigForUin(config, uin),
+    };
+  }
+  return {
+    mcp: resolveMcpConfig(config.mcp),
+    rpc: resolveRpcConfig(config.rpc),
+  };
+}
+
+/** 列出全部配置项（摘要）；指定 uin 时 mcp/rpc 为合并后的生效值 */
+export function listAllConfigEntries(
+  config: IcqqConfig,
+  uin?: number,
+): [string, string][] {
+  const { mcp, rpc } = resolveScopedMcpRpc(config, uin);
+  const suffix = (key: ConfigSetKey) =>
+    uin !== undefined ? accountOverrideNote(config, uin, key) : "";
+
+  const entries: [string, string][] = [
     ["currentUin", config.currentUin != null ? String(config.currentUin) : unset()],
     ["webhookUrl", config.webhookUrl || unset()],
     ["notifyEnabled", formatBool(config.notifyEnabled ?? false)],
@@ -63,29 +118,42 @@ export function listAllConfigEntries(config: IcqqConfig): [string, string][] {
         ? Object.keys(config.accounts).join(", ")
         : "(无)",
     ],
-    ["mcp.enabled", formatBool(mcp.enabled)],
-    ["mcp.http.host", mcp.http.host],
-    ["mcp.http.port", formatPort(mcp.http.port)],
-    ["mcp.http.token", formatToken(mcp.http.token)],
+    ["mcp.enabled", formatBool(mcp.enabled) + suffix("mcp.enabled")],
+    ["mcp.http.host", mcp.http.host + suffix("mcp.http.host")],
+    ["mcp.http.port", formatPort(mcp.http.port) + suffix("mcp.http.port")],
+    ["mcp.http.token", formatToken(mcp.http.token) + suffix("mcp.http.token")],
     ["mcp.plugins", formatPlugins(mcp.plugins)],
-    ["rpc.enabled", formatBool(rpc.enabled)],
-    ["rpc.host", rpc.host],
-    ["rpc.port", formatPort(rpc.port)],
+    ["rpc.enabled", formatBool(rpc.enabled) + suffix("rpc.enabled")],
+    ["rpc.host", rpc.host + suffix("rpc.host")],
+    ["rpc.port", formatPort(rpc.port) + suffix("rpc.port")],
   ];
+
+  if (uin !== undefined) {
+    entries.unshift([`scope`, `账号 ${uin}（mcp/rpc 为全局默认 + 账号覆盖合并）`]);
+  }
+
+  return entries;
 }
 
 /** 列出 mcp / rpc 分组下所有项 */
 export function listGroupConfigEntries(
   config: IcqqConfig,
   group: ConfigGetGroup,
+  uin?: number,
 ): [string, string][] {
-  return listAllConfigEntries(config).filter(([k]) => k.startsWith(`${group}.`));
+  return listAllConfigEntries(config, uin).filter(([k]) => k.startsWith(`${group}.`));
 }
 
 /** 读取单个配置项的展示值 */
-export function getConfigDisplayValue(config: IcqqConfig, key: ConfigGetKey): string {
-  const mcp = resolveMcpConfig(config.mcp);
-  const rpc = resolveRpcConfig(config.rpc);
+export function getConfigDisplayValue(
+  config: IcqqConfig,
+  key: ConfigGetKey,
+  uin?: number,
+): string {
+  const { mcp, rpc } = resolveScopedMcpRpc(config, uin);
+  const suffix = uin !== undefined && isAccountScopedConfigKey(key as ConfigSetKey)
+    ? accountOverrideNote(config, uin, key as ConfigSetKey)
+    : "";
 
   switch (key) {
     case "currentUin":
@@ -99,21 +167,21 @@ export function getConfigDisplayValue(config: IcqqConfig, key: ConfigGetKey): st
         ? JSON.stringify(config.accounts, null, 2)
         : "(无)";
     case "mcp.enabled":
-      return formatBool(mcp.enabled);
+      return formatBool(mcp.enabled) + suffix;
     case "mcp.http.host":
-      return mcp.http.host;
+      return mcp.http.host + suffix;
     case "mcp.http.port":
-      return formatPort(mcp.http.port);
+      return formatPort(mcp.http.port) + suffix;
     case "mcp.http.token":
-      return formatToken(mcp.http.token);
+      return formatToken(mcp.http.token) + suffix;
     case "mcp.plugins":
       return formatPlugins(mcp.plugins);
     case "rpc.enabled":
-      return formatBool(rpc.enabled);
+      return formatBool(rpc.enabled) + suffix;
     case "rpc.host":
-      return rpc.host;
+      return rpc.host + suffix;
     case "rpc.port":
-      return formatPort(rpc.port);
+      return formatPort(rpc.port) + suffix;
     default:
       return "";
   }

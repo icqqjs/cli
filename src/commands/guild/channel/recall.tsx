@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Text } from "ink";
 import zod from "zod";
 import { argument } from "pastel";
 import { IpcMutate } from "@/components/IpcCommand.js";
@@ -21,7 +22,9 @@ export default function GuildRecall({ args: [guildId, channelId, seq] }: Props) 
 
   if (!selectedGuild) return <GuildSelector onSelect={setSelectedGuild} />;
   if (!selectedChannel) return <ChannelSelector guildId={selectedGuild} onSelect={setSelectedChannel} />;
-  if (seq === undefined) return null;
+  if (seq === undefined) {
+    return <Text color="yellow">请提供 seq 参数（消息序列号）</Text>;
+  }
 
   return (
     <IpcMutate

@@ -117,13 +117,29 @@ export class McpHost {
     });
 
     await new Promise<void>((resolve, reject) => {
-      const server = app.listen(
-        this.config.http.port,
-        this.config.http.host,
-        () => resolve(),
-      );
-      server.on("error", reject);
-      this.httpServer = server;
+      const tryListen = (port: number, retried: boolean) => {
+        const server = app.listen(port, this.config.http.host, () => {
+          this.httpServer = server;
+          resolve();
+        });
+        server.on("error", (err: NodeJS.ErrnoException) => {
+          server.close();
+          if (
+            !retried &&
+            err.code === "EADDRINUSE" &&
+            port !== 0 &&
+            this.config.http.port !== 0
+          ) {
+            console.warn(
+              `[mcp] 端口 ${port} 已被占用，改为自动分配端口（多账号建议 mcp.http.port=0）`,
+            );
+            tryListen(0, true);
+            return;
+          }
+          reject(err);
+        });
+      };
+      tryListen(this.config.http.port, false);
     });
 
     const addr = this.httpServer!.address();

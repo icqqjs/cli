@@ -35,6 +35,28 @@ describe("config-set", () => {
     expect(config.mcp?.http?.port).toBe(3920);
   });
 
+  it("applies account-scoped mcp/rpc when uin is provided", () => {
+    const config: IcqqConfig = {
+      mcp: { enabled: true, http: { host: "127.0.0.1", port: 61500 } },
+      rpc: { enabled: false, host: "127.0.0.1", port: 0 },
+      accounts: {
+        "210723495": { platform: 3, signApiUrl: "https://sign.example.com" },
+      },
+    };
+
+    applyConfigSet(config, "mcp.http.port", 61501, 210723495);
+    applyConfigSet(config, "rpc.enabled", true, 210723495);
+
+    expect(config.mcp?.http?.port).toBe(61500);
+    expect(config.accounts["210723495"]?.mcp?.http?.port).toBe(61501);
+    expect(config.accounts["210723495"]?.rpc?.enabled).toBe(true);
+  });
+
+  it("rejects global-only keys with uin scope", () => {
+    const config: IcqqConfig = { accounts: {} };
+    expect(() => applyConfigSet(config, "currentUin", 1, 123)).toThrow("全局配置");
+  });
+
   it("applies all top-level and nested config keys", () => {
     const config: IcqqConfig = { accounts: {} };
 

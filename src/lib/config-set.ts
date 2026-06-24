@@ -1,7 +1,7 @@
 /**
  * config set 键解析与赋值。
  */
-import type { IcqqConfig } from "./config.js";
+import type { AccountConfig, IcqqConfig } from "./config.js";
 
 const TOP_LEVEL_KEYS = ["currentUin", "webhookUrl", "notifyEnabled"] as const;
 
@@ -19,6 +19,8 @@ export const CONFIG_SET_KEYS = [...TOP_LEVEL_KEYS, ...NESTED_KEYS] as const;
 
 export type ConfigSetKey = (typeof CONFIG_SET_KEYS)[number];
 
+export const ACCOUNT_SCOPED_CONFIG_KEYS = NESTED_KEYS;
+
 function parseBool(raw: string): boolean {
   if (raw === "true" || raw === "1") return true;
   if (raw === "false" || raw === "0") return false;
@@ -31,6 +33,10 @@ function parsePort(raw: string): number {
     throw new Error("端口必须为 0–65535 的整数");
   }
   return n;
+}
+
+export function isAccountScopedConfigKey(key: ConfigSetKey): boolean {
+  return (ACCOUNT_SCOPED_CONFIG_KEYS as readonly string[]).includes(key);
 }
 
 export function parseConfigSetValue(key: ConfigSetKey, raw: string): unknown {
@@ -61,11 +67,79 @@ export function isConfigSetKey(key: string): key is ConfigSetKey {
   return (CONFIG_SET_KEYS as readonly string[]).includes(key);
 }
 
+function ensureAccountEntry(config: IcqqConfig, uin: number): AccountConfig {
+  const key = String(uin);
+  const existing = config.accounts[key];
+  if (existing) return existing;
+  const shell: AccountConfig = { platform: 0, signApiUrl: "" };
+  config.accounts[key] = shell;
+  return shell;
+}
+
+function applyMcpRpcToScope(
+  scope: {
+    mcp?: IcqqConfig["mcp"];
+    rpc?: IcqqConfig["rpc"];
+  },
+  key: ConfigSetKey,
+  value: unknown,
+): void {
+  switch (key) {
+    case "mcp.enabled":
+      scope.mcp ??= {};
+      scope.mcp.enabled = value as boolean;
+      return;
+    case "mcp.http.host":
+      scope.mcp ??= {};
+      scope.mcp.http ??= { host: "127.0.0.1", port: 0 };
+      scope.mcp.http.host = value as string;
+      return;
+    case "mcp.http.port":
+      scope.mcp ??= {};
+      scope.mcp.http ??= { host: "127.0.0.1", port: 0 };
+      scope.mcp.http.port = value as number;
+      return;
+    case "mcp.http.token":
+      scope.mcp ??= {};
+      scope.mcp.http ??= { host: "127.0.0.1", port: 0 };
+      scope.mcp.http.token = value as string;
+      return;
+    case "rpc.enabled":
+      scope.rpc ??= {};
+      scope.rpc.enabled = value as boolean;
+      return;
+    case "rpc.host":
+      scope.rpc ??= {};
+      scope.rpc.host = value as string;
+      return;
+    case "rpc.port":
+      scope.rpc ??= {};
+      scope.rpc.port = value as number;
+      return;
+    default:
+      return;
+  }
+}
+
+/**
+ * 写入配置。指定 uin 时 mcp/rpc 写入账号覆盖，其余键仍写全局。
+ */
 export function applyConfigSet(
   config: IcqqConfig,
   key: ConfigSetKey,
   value: unknown,
+  uin?: number,
 ): void {
+  if (uin !== undefined && isAccountScopedConfigKey(key)) {
+    const account = ensureAccountEntry(config, uin);
+    applyMcpRpcToScope(account, key, value);
+    return;
+  }
+
+  if (uin !== undefined && !isAccountScopedConfigKey(key)) {
+    throw new Error(`${key} 为全局配置，请去掉 -u 再设置`);
+  }
+
   switch (key) {
     case "currentUin":
       config.currentUin = value as number;
@@ -76,36 +150,7 @@ export function applyConfigSet(
     case "notifyEnabled":
       config.notifyEnabled = value as boolean;
       return;
-    case "mcp.enabled":
-      config.mcp ??= {};
-      config.mcp.enabled = value as boolean;
-      return;
-    case "mcp.http.host":
-      config.mcp ??= {};
-      config.mcp.http ??= { host: "127.0.0.1", port: 0 };
-      config.mcp.http.host = value as string;
-      return;
-    case "mcp.http.port":
-      config.mcp ??= {};
-      config.mcp.http ??= { host: "127.0.0.1", port: 0 };
-      config.mcp.http.port = value as number;
-      return;
-    case "mcp.http.token":
-      config.mcp ??= {};
-      config.mcp.http ??= { host: "127.0.0.1", port: 0 };
-      config.mcp.http.token = value as string;
-      return;
-    case "rpc.enabled":
-      config.rpc ??= {};
-      config.rpc.enabled = value as boolean;
-      return;
-    case "rpc.host":
-      config.rpc ??= {};
-      config.rpc.host = value as string;
-      return;
-    case "rpc.port":
-      config.rpc ??= {};
-      config.rpc.port = value as number;
-      return;
+    default:
+      applyMcpRpcToScope(config, key, value);
   }
 }
