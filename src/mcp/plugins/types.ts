@@ -1,6 +1,6 @@
 import type { Client } from "@icqqjs/icqq";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { InvokeActionResult } from "../invoke-action.js";
+import type { InvokeMcpActionResult } from "../action-contract.js";
 import type { McpToolResponse } from "../exposure-contract.js";
 
 export type IcqqMcpPluginContext = {
@@ -10,7 +10,7 @@ export type IcqqMcpPluginContext = {
   invokeAction: (
     action: string,
     params?: Record<string, unknown>,
-  ) => Promise<InvokeActionResult>;
+  ) => Promise<InvokeMcpActionResult>;
   listActions: () => Array<{
     action: string;
     description: string;

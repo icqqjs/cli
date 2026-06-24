@@ -4,27 +4,12 @@
 import { Actions } from "./protocol.js";
 import { ACTION_CATALOG } from "./action-catalog.js";
 
+export { MCP_BLOCKED_ACTIONS } from "@/mcp/policy.js";
+
 export type ActionMeta = {
   description: string;
   paramsHint?: string;
 };
-
-/** MCP 禁止调用的 action（避免 AI 关闭守护进程、泄漏密钥、执行破坏性操作等） */
-export const MCP_BLOCKED_ACTIONS = new Set<string>([
-  Actions.LOGOUT,
-  Actions.GET_CLIENT_KEY,
-  Actions.GET_PSKEY,
-  Actions.SET_WEBHOOK,
-  Actions.FRIEND_DELETE,
-  Actions.GROUP_KICK,
-  Actions.GROUP_QUIT,
-  Actions.GROUP_MUTE,
-  Actions.GROUP_MUTE_ALL,
-  Actions.DELETE_MSG,
-  Actions.RECALL_MSG,
-  Actions.DELETE_STAMP,
-  Actions.GFS_DELETE,
-]);
 
 export const ACTION_VALUES = Object.values(Actions) as string[];
 

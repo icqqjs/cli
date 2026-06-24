@@ -6,6 +6,7 @@ import {
 } from "./exposure-contract.js";
 import { loadMcpPlugins } from "./plugins/load.js";
 import type { ResolvedMcpConfig } from "@/lib/config.js";
+import type { DaemonContext } from "@/daemon/daemon-context.js";
 
 const INSTRUCTIONS = `通过 icqq_invoke 调用 QQ 操作。action 必须为协议中定义的值；params 与 IPC 一致。
 常用：send_private_msg (user_id, message)、send_group_msg (group_id, message)、send_temp_msg (group_id, user_id, message)、list_friends、get_self_profile。
@@ -17,6 +18,7 @@ export async function createMcpServer(
   client: Client,
   uin: number,
   config: ResolvedMcpConfig,
+  daemonContext: DaemonContext,
 ): Promise<McpServer> {
   const server = new McpServer(
     {
@@ -26,7 +28,12 @@ export async function createMcpServer(
     { instructions: INSTRUCTIONS },
   );
 
-  const pluginContext = createMcpPluginContext({ server, client, uin });
+  const pluginContext = createMcpPluginContext({
+    server,
+    client,
+    uin,
+    daemonContext,
+  });
   registerCoreMcpTools(server, pluginContext);
 
   await loadMcpPlugins(pluginContext, config.plugins);

@@ -2,9 +2,13 @@ import type { Client } from "@icqqjs/icqq";
 import {
   ACTION_CATALOG,
   getActionCatalogEntry,
-  PILOT_ACTION_CATALOG,
 } from "@/daemon/action-catalog.js";
-import { MCP_BLOCKED_ACTIONS } from "@/daemon/action-meta.js";
+import type { DaemonContext } from "@/daemon/daemon-context.js";
+import {
+  validateMcpAction,
+  listMcpDiscoverableActions,
+  isPilotMcpAction,
+} from "./policy.js";
 
 export type McpActionContract = {
   action: string;
@@ -13,6 +17,7 @@ export type McpActionContract = {
   execute: (
     client: Client,
     params: Record<string, unknown>,
+    ctx: DaemonContext,
   ) => Promise<unknown>;
 };
 
@@ -20,9 +25,11 @@ export type InvokeMcpActionResult =
   | { ok: true; data: unknown }
   | { ok: false; error: string };
 
-const PILOT_ACTION_SET = new Set(
-  PILOT_ACTION_CATALOG.map((entry) => entry.action),
-);
+export {
+  validateMcpAction,
+  listMcpDiscoverableActions,
+  isPilotMcpAction,
+};
 
 export function listMcpActionContracts(): McpActionContract[] {
   return ACTION_CATALOG.map(({ action, description, paramsHint, execute }) => ({
@@ -46,34 +53,25 @@ export function getMcpActionContract(action: string): McpActionContract | null {
   return null;
 }
 
-export function validateMcpAction(action: string): string | null {
-  if (!action || typeof action !== "string") {
-    return "缺少参数 action";
-  }
-  if (MCP_BLOCKED_ACTIONS.has(action)) {
-    return `禁止通过 MCP 调用: ${action}`;
-  }
-  if (!getMcpActionContract(action)) {
-    return `未知 action: ${action}，请使用 icqq_list_actions 查看可用列表`;
-  }
-  return null;
-}
-
 export async function invokeMcpAction(
   client: Client,
   action: string,
   params: Record<string, unknown> = {},
+  ctx: DaemonContext,
 ): Promise<InvokeMcpActionResult> {
   const error = validateMcpAction(action);
   if (error) return { ok: false, error };
 
   const contract = getMcpActionContract(action);
   if (!contract) {
-    return { ok: false, error: `未知 action: ${action}，请使用 icqq_list_actions 查看可用列表` };
+    return {
+      ok: false,
+      error: `未知 action: ${action}，请使用 icqq_list_actions 查看可用列表`,
+    };
   }
 
   try {
-    const data = await contract.execute(client, params ?? {});
+    const data = await contract.execute(client, params ?? {}, ctx);
     return { ok: true, data };
   } catch (err) {
     return {
@@ -85,18 +83,4 @@ export async function invokeMcpAction(
 
 export function formatMcpActionResult(data: unknown): string {
   return JSON.stringify(data, null, 2);
-}
-
-export function listMcpDiscoverableActions(): Array<
-  Pick<McpActionContract, "action" | "description" | "paramsHint">
-> {
-  return listMcpActionContracts().map(({ action, description, paramsHint }) => ({
-    action,
-    description,
-    paramsHint,
-  }));
-}
-
-export function isPilotMcpAction(action: string): boolean {
-  return PILOT_ACTION_SET.has(action);
 }

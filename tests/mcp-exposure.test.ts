@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   createMcpPluginContext,
   errorMcpResponse,
@@ -6,6 +6,7 @@ import {
   okMcpResponse,
   registerCoreMcpTools,
 } from "../src/mcp/exposure-contract.js";
+import { createStubDaemonContext } from "./helpers/daemon-test-context.js";
 
 function createServerHarness() {
   const tools = new Map<string, (input: any) => Promise<any>>();
@@ -40,14 +41,16 @@ describe("MCP exposure contract", () => {
 
   it("registers core MCP tools behind the canonical exposure seam", async () => {
     const harness = createServerHarness();
-    const ctx = createMcpPluginContext({
-      server: harness.server as never,
-      client: {
+    const client = {
         gl: new Map([
           [1, { group_id: 1, group_name: "群", member_count: 2, max_member_count: 200, owner_id: 9 }],
         ]),
-      } as never,
+      } as never;
+    const ctx = createMcpPluginContext({
+      server: harness.server as never,
+      client,
       uin: 123,
+      daemonContext: createStubDaemonContext(client),
     });
 
     registerCoreMcpTools(harness.server as never, ctx);

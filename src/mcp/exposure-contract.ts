@@ -6,6 +6,7 @@ import {
   listMcpDiscoverableActions,
   type InvokeMcpActionResult,
 } from "./action-contract.js";
+import type { DaemonContext } from "@/daemon/daemon-context.js";
 import type { IcqqMcpPluginContext } from "./plugins/types.js";
 
 type McpTextContent = { type: "text"; text: string };
@@ -40,14 +41,15 @@ export function createMcpPluginContext(options: {
   server: McpServer;
   client: Client;
   uin: number;
+  daemonContext: DaemonContext;
 }): IcqqMcpPluginContext {
-  const { server, client, uin } = options;
+  const { server, client, uin, daemonContext } = options;
   return {
     server,
     client,
     uin,
     invokeAction: (action: string, params?: Record<string, unknown>) =>
-      invokeMcpAction(client, action, params),
+      invokeMcpAction(client, action, params, daemonContext),
     listActions: () => listMcpDiscoverableActions(),
     formatResult: formatMcpResult,
     ok: okMcpResponse,

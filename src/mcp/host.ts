@@ -10,6 +10,7 @@ import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js
 import { timingSafeEqual } from "node:crypto";
 import express from "express";
 import type { ResolvedMcpConfig } from "@/lib/config.js";
+import type { DaemonContext } from "@/daemon/daemon-context.js";
 import { getMcpEndpointPath } from "@/lib/paths.js";
 import { createMcpServer } from "./create-server.js";
 
@@ -28,6 +29,7 @@ export class McpHost {
     private client: Client,
     private uin: number,
     private config: ResolvedMcpConfig,
+    private daemonContext: DaemonContext,
   ) {}
 
   getEndpoint(): McpEndpointInfo | null {
@@ -53,7 +55,12 @@ export class McpHost {
       );
     }
 
-    this.mcpServer = await createMcpServer(this.client, this.uin, this.config);
+    this.mcpServer = await createMcpServer(
+      this.client,
+      this.uin,
+      this.config,
+      this.daemonContext,
+    );
 
     const basePath = "/mcp";
     const app = createMcpExpressApp({ host: this.config.http.host });
