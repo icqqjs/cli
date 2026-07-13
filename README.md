@@ -1,5 +1,7 @@
 # @icqqjs/cli
 
+[![QQ 群](https://img.shields.io/badge/QQ%E7%BE%A4-860669870-blue?logo=tencentqq&logoColor=white)](https://qm.qq.com/q/xnxDxKUyYK)
+
 基于 [icqq](https://github.com/icqqjs/icqq) 的命令行 QQ 客户端，使用 React Ink 构建交互式终端 UI。
 
 ## 安装
