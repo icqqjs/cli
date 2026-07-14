@@ -12,16 +12,16 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      paths_released: ${{ steps.release.outputs.paths_released }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
-        with:
-          release-type: node
+        # 不设 release-type：走根目录 release-please-config.json + .release-please-manifest.json
 
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
+    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,5 +42,16 @@ jobs:
       - name: Install, build and typecheck
         run: pnpm install --frozen-lockfile && pnpm build && pnpm typecheck
 
-      - name: Publish to npm
-        run: pnpm -r publish --no-git-checks --access public
+      - name: Publish released packages
+        env:
+          PATHS_RELEASED: ${{ needs.release-please.outputs.paths_released }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PATHS_RELEASED}" ] || [ "${PATHS_RELEASED}" = "[]" ]; then
+            echo "No packages to publish"
+            exit 0
+          fi
+          echo "$PATHS_RELEASED" | jq -r '.[]' | while read -r path; do
+            echo "Publishing ./$path ..."
+            pnpm --filter "./$path" publish --no-git-checks --access public
+          done

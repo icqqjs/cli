@@ -28,6 +28,15 @@
   "engines": {
     "node": ">=22"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/icqqjs/packages.git",
+    "directory": "packages/gateway"
+  },
   "dependencies": {
     "@gsap/react": "^2.1.2",
     "@icqqjs/sdk": "workspace:*",

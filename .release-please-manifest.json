@@ -1,0 +1,5 @@
+{
+  "packages/cli": "1.10.0",
+  "packages/sdk": "0.1.0",
+  "packages/gateway": "0.1.0"
+}

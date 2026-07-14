@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "include-component-in-tag": true,
+  "include-v-in-tag": true,
+  "packages": {
+    "packages/cli": {
+      "component": "cli",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "packages/sdk": {
+      "component": "sdk",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "packages/gateway": {
+      "component": "gateway",
+      "changelog-path": "CHANGELOG.md"
+    }
+  },
+  "plugins": [
+    {
+      "type": "node-workspace",
+      "updatePeerDependencies": false
+    }
+  ]
+}
