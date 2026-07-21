@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
-import { Badge, Button, Card, CodeBlock } from "../components/ui";
-import { TopBar } from "../components/nav";
+import { Badge, Card, CodeBlock } from "../components/ui";
+import { NavLink, TopBar } from "../components/nav";
 
 const SECTIONS: { id: string; title: string }[] = [
   { id: "overview", title: "概览" },
@@ -31,7 +30,10 @@ function Section({
 }) {
   return (
     <section id={id} className="scroll-mt-24 space-y-4">
-      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+      <h2 className="flex items-center gap-3 text-xl font-semibold tracking-tight">
+        <span className="h-5 w-1 rounded-full bg-brand-500/60" aria-hidden />
+        {title}
+      </h2>
       {children}
     </section>
   );
@@ -51,21 +53,21 @@ function Code({ children }: { children: ReactNode }) {
 
 export default function DocsPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <TopBar
         right={
-          <Link href="/hosts">
-            <Button variant="ghost" size="sm">
-              返回控制台
-            </Button>
-          </Link>
+          <>
+            <NavLink href="/hosts">主机</NavLink>
+            <NavLink href="/tokens">密钥</NavLink>
+            <NavLink href="/docs">文档</NavLink>
+          </>
         }
       />
 
-      <div className="mx-auto max-w-5xl gap-8 px-5 py-8 lg:grid lg:grid-cols-[200px_1fr]">
+      <div className="mx-auto max-w-5xl gap-10 px-5 py-10 lg:grid lg:grid-cols-[200px_1fr]">
         <aside className="hidden lg:block">
-          <nav className="sticky top-24 space-y-1">
-            <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-muted">
+          <nav className="sticky top-24 space-y-0.5">
+            <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wider text-muted">
               文档目录
             </p>
             {SECTIONS.map((s) => (

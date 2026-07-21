@@ -12,8 +12,20 @@ import {
   type ApiToken,
   type Me,
 } from "../lib/api";
-import { Badge, Button, Card, CopyButton, Field, Input } from "../components/ui";
-import { TopBar } from "../components/nav";
+import {
+  AppDialog,
+  Badge,
+  Button,
+  Card,
+  CopyButton,
+  EmptyState,
+  ErrorText,
+  Field,
+  Input,
+  PageHeader,
+  Skeleton,
+} from "../components/ui";
+import { NavLink, TopBar } from "../components/nav";
 
 export default function TokensPage() {
   const { data: me, error } = useSWR<Me>("/api/me", fetcher, {
@@ -22,7 +34,7 @@ export default function TokensPage() {
 
   if (error)
     return (
-      <div className="grid min-h-screen place-items-center gap-3 text-center">
+      <div className="grid min-h-dvh place-items-center gap-3 text-center">
         <p className="text-sm text-muted">请先登录</p>
         <Link href="/">
           <Button>去登录</Button>
@@ -31,8 +43,8 @@ export default function TokensPage() {
     );
   if (!me)
     return (
-      <div className="grid min-h-screen place-items-center text-sm text-muted">
-        加载中…
+      <div className="grid min-h-dvh place-items-center">
+        <Skeleton className="h-8 w-40" />
       </div>
     );
 
@@ -45,55 +57,58 @@ function TokensView() {
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <TopBar
         right={
           <>
-            <Link href="/hosts">
-              <Button variant="ghost" size="sm">
-                主机
-              </Button>
-            </Link>
-            <Link href="/docs">
-              <Button variant="ghost" size="sm">
-                文档
-              </Button>
-            </Link>
+            <NavLink href="/hosts">主机</NavLink>
+            <NavLink href="/tokens">密钥</NavLink>
+            <NavLink href="/docs">文档</NavLink>
           </>
         }
       />
 
-      <main className="mx-auto max-w-3xl space-y-6 px-5 py-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">API 密钥</h1>
-            <p className="mt-1 text-sm text-muted">
-              用于 MCP 与 RPC 鉴权。密钥仅在创建时完整显示一次，之后只保留掩码。
-            </p>
-          </div>
-          <CreateTokenDialog onDone={() => void mutate()} />
-        </div>
+      <main className="mx-auto max-w-3xl space-y-6 px-5 py-10">
+        <PageHeader
+          title="API 密钥"
+          description="用于 MCP 与 RPC 鉴权。密钥仅在创建时完整显示一次，之后列表只保留掩码。"
+          actions={<CreateTokenDialog onDone={() => void mutate()} />}
+        />
 
         <Card padded={false}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-muted">
+                <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wider text-muted">
                   <th className="px-5 py-3 font-medium">密钥</th>
                   <th className="px-5 py-3 font-medium">备注</th>
                   <th className="px-5 py-3 font-medium">创建时间</th>
-                  <th className="px-5 py-3" />
+                  <th className="px-5 py-3">
+                    <span className="sr-only">操作</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
+                {!tokens && (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-4">
+                      <div className="space-y-3">
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-4/5" />
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {(tokens ?? []).map((t) => (
                   <tr
                     key={t.id}
-                    className="border-b border-[var(--border)] last:border-0 transition hover:surface-2"
+                    className="border-b border-[var(--border)] transition last:border-0 hover:surface-2"
                   >
-                    <td className="px-5 py-3.5 font-mono">{t.masked}</td>
+                    <td className="px-5 py-3.5 font-mono text-xs">
+                      {t.masked}
+                    </td>
                     <td className="px-5 py-3.5 text-muted">{t.label ?? "—"}</td>
-                    <td className="px-5 py-3.5 text-xs text-muted">
+                    <td className="px-5 py-3.5 text-xs tabular-nums text-muted">
                       {new Date(t.created_at).toLocaleString()}
                     </td>
                     <td className="px-5 py-3.5 text-right">
@@ -114,11 +129,26 @@ function TokensView() {
                 ))}
                 {tokens && tokens.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-5 py-16 text-center">
-                      <p className="text-sm font-medium">还没有密钥</p>
-                      <p className="mt-1 text-xs text-muted">
-                        点击右上角「新建密钥」生成第一个。
-                      </p>
+                    <td colSpan={4}>
+                      <EmptyState
+                        icon={
+                          <svg
+                            width="22"
+                            height="22"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden
+                          >
+                            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+                          </svg>
+                        }
+                        title="还没有 API 密钥"
+                        description="点击右上角「新建密钥」生成第一个，用于脚本或 MCP 客户端鉴权。"
+                      />
                     </td>
                   </tr>
                 )}
@@ -155,69 +185,55 @@ function CreateTokenDialog({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <Dialog.Root
+    <AppDialog
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
         if (!o) reset();
       }}
+      trigger={<Button>新建密钥</Button>}
+      title="新建 API 密钥"
     >
-      <Dialog.Trigger asChild>
-        <Button>新建密钥</Button>
-      </Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" />
-        <Dialog.Content className="surface fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-2xl border border-[var(--border)] p-6 shadow-2xl">
-          <Dialog.Title className="text-lg font-semibold tracking-tight">
-            新建 API 密钥
-          </Dialog.Title>
-
-          {!created ? (
-            <>
-              <Field label="备注（可选）" hint="用于区分用途，例如 “n8n 集成”。">
-                <Input
-                  placeholder="例如：本地脚本"
-                  value={label}
-                  autoFocus
-                  onChange={(e) => setLabel(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && void submit()}
-                />
-              </Field>
-              {err && (
-                <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
-                  {err}
-                </p>
-              )}
-              <div className="flex justify-end gap-2">
-                <Dialog.Close asChild>
-                  <Button variant="ghost">取消</Button>
-                </Dialog.Close>
-                <Button onClick={() => void submit()}>生成</Button>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-3">
-              <p className="flex items-center gap-2 text-sm">
-                密钥已生成 <Badge tone="amber">仅显示一次</Badge>
-              </p>
-              <div className="flex items-center gap-2 rounded-lg surface-2 p-3">
-                <code className="min-w-0 flex-1 break-all font-mono text-sm">
-                  {created}
-                </code>
-                <CopyButton value={created} className="shrink-0" />
-              </div>
-              <p className="text-xs text-muted">
-                请立即复制并妥善保存，关闭后将无法再次查看完整密钥。
-              </p>
-              <div className="flex justify-end">
-                <Dialog.Close asChild>
-                  <Button>完成</Button>
-                </Dialog.Close>
-              </div>
-            </div>
-          )}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      {!created ? (
+        <div className="space-y-4">
+          <Field label="备注（可选）" hint="用于区分用途，例如 “n8n 集成”。">
+            <Input
+              placeholder="例如：本地脚本"
+              value={label}
+              autoFocus
+              onChange={(e) => setLabel(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && void submit()}
+            />
+          </Field>
+          {err && <ErrorText>{err}</ErrorText>}
+          <div className="flex justify-end gap-2">
+            <Dialog.Close asChild>
+              <Button variant="ghost">取消</Button>
+            </Dialog.Close>
+            <Button onClick={() => void submit()}>生成</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <p className="flex items-center gap-2 text-sm">
+            密钥已生成 <Badge tone="amber">仅显示一次</Badge>
+          </p>
+          <div className="flex items-center gap-2 rounded-xl surface-2 p-3">
+            <code className="min-w-0 flex-1 break-all font-mono text-sm">
+              {created}
+            </code>
+            <CopyButton value={created} className="shrink-0" />
+          </div>
+          <p className="text-xs leading-5 text-muted">
+            请立即复制并妥善保存，关闭后将无法再次查看完整密钥。
+          </p>
+          <div className="flex justify-end">
+            <Dialog.Close asChild>
+              <Button>完成</Button>
+            </Dialog.Close>
+          </div>
+        </div>
+      )}
+    </AppDialog>
   );
 }

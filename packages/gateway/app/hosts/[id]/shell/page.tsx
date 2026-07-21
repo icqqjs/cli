@@ -84,26 +84,37 @@ export default function HostShellPage() {
 
   if (error)
     return (
-      <div className="p-8 text-center">
-        <Link href="/">去登录</Link>
+      <div className="grid min-h-dvh place-items-center p-8">
+        <Link href="/" className="text-sm text-brand-600 hover:underline">
+          去登录
+        </Link>
       </div>
     );
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-dvh flex-col">
       <TopBar
         right={
           <Link href={`/hosts/${hostId}`}>
             <Button variant="ghost" size="sm">
-              返回
+              ← 返回主机
             </Button>
           </Link>
         }
       />
-      <div className="border-b border-[var(--border)] px-5 py-2 text-sm text-muted">
-        Shell · {host?.name ?? hostId}
+      <div className="flex items-center gap-2.5 border-b border-[var(--border)] px-5 py-2.5">
+        <span className="flex gap-1.5" aria-hidden>
+          <span className="size-2.5 rounded-full bg-red-400/70" />
+          <span className="size-2.5 rounded-full bg-amber-400/70" />
+          <span className="size-2.5 rounded-full bg-emerald-400/70" />
+        </span>
+        <p className="font-mono text-xs text-muted">
+          shell · {host?.name ?? hostId}
+        </p>
       </div>
-      <div ref={termRef} className="min-h-0 flex-1 p-2" />
+      <div className="min-h-0 flex-1 bg-[#14151d] p-2">
+        <div ref={termRef} className="h-full w-full" />
+      </div>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { login } from "./lib/api";
 import { AuthLayout } from "./components/auth-layout";
-import { Button, Field, Input } from "./components/ui";
+import { Button, ErrorText, Field, Input } from "./components/ui";
 
 export default function Page() {
   const router = useRouter();
@@ -58,11 +58,7 @@ export default function Page() {
             onKeyDown={(e) => e.key === "Enter" && void submit()}
           />
         </Field>
-        {err && (
-          <p className="rounded-xl bg-red-500/10 px-3 py-2.5 text-sm text-red-500">
-            {err}
-          </p>
-        )}
+        {err && <ErrorText>{err}</ErrorText>}
         <Button
           className="w-full rounded-xl py-2.5"
           disabled={busy || !username || !password}

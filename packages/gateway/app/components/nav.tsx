@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { clsx } from "clsx";
 import type { ReactNode } from "react";
 
 export function Logo({ size = 30 }: { size?: number }) {
@@ -27,15 +29,51 @@ export function Logo({ size = 30 }: { size?: number }) {
   );
 }
 
+function Wordmark() {
+  return (
+    <span className="flex flex-col leading-none">
+      <span className="text-sm font-semibold tracking-tight">icqq gateway</span>
+      <span className="mt-0.5 text-[11px] text-muted">多 Bot 共享网关</span>
+    </span>
+  );
+}
+
+export function NavLink({
+  href,
+  children,
+  exact = false,
+}: {
+  href: string;
+  children: ReactNode;
+  exact?: boolean;
+}) {
+  const pathname = usePathname();
+  const active = exact ? pathname === href : pathname.startsWith(href);
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={clsx(
+        "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors outline-none",
+        "focus-visible:ring-2 focus-visible:ring-brand-500/50",
+        active
+          ? "bg-brand-500/10 text-brand-600"
+          : "text-muted hover:surface-2 hover:text-[var(--text)]",
+      )}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function FloatingNav({ right }: { right?: ReactNode }) {
   return (
     <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-5">
       <div className="glass-pill flex w-full max-w-5xl items-center justify-between gap-3 rounded-2xl px-4 py-2.5">
         <Link href="/hosts" className="flex items-center gap-2.5">
           <Logo size={34} />
-          <span className="hidden flex-col leading-none sm:flex">
-            <span className="text-sm font-semibold tracking-tight">icqq gateway</span>
-            <span className="text-[11px] text-muted">多 Bot 共享网关</span>
+          <span className="hidden sm:flex">
+            <Wordmark />
           </span>
         </Link>
         <nav className="flex items-center gap-1">{right}</nav>
@@ -50,10 +88,7 @@ export function TopBar({ right }: { right?: ReactNode }) {
       <div className="glass-pill mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 rounded-2xl px-4">
         <Link href="/hosts" className="flex items-center gap-2.5">
           <Logo />
-          <span className="flex flex-col leading-none">
-            <span className="text-sm font-semibold tracking-tight">icqq gateway</span>
-            <span className="text-[11px] text-muted">多 Bot 共享网关</span>
-          </span>
+          <Wordmark />
         </Link>
         <nav className="flex items-center gap-1">{right}</nav>
       </div>

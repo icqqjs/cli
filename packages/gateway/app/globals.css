@@ -48,9 +48,23 @@
   border-color: var(--border);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   min-height: 100%;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 body {
@@ -137,4 +151,82 @@ body::after {
   line-height: 1.05;
   letter-spacing: -0.03em;
   font-weight: 600;
+}
+@utility page-title {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+@utility skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: color-mix(in oklab, var(--text-muted) 14%, transparent);
+  border-radius: 0.5rem;
+}
+@utility aurora {
+  background-image:
+    radial-gradient(
+      90% 90% at 15% 10%,
+      color-mix(in oklab, var(--color-brand-500) 26%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      80% 80% at 85% 30%,
+      color-mix(in oklab, var(--color-brand-400) 18%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      70% 70% at 60% 90%,
+      color-mix(in oklab, var(--color-brand-600) 16%, transparent),
+      transparent 60%
+    );
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--text) 8%, transparent),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.dialog-overlay {
+  animation: overlay-in 0.18s ease-out;
+}
+.dialog-content {
+  animation: dialog-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.fade-up {
+  animation: fade-up 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }

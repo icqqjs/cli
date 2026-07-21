@@ -8,13 +8,7 @@ import {
   submitLogin,
   type LoginStateView,
 } from "../lib/api";
-import { Badge, Button, Input } from "./ui";
-
-function Spinner() {
-  return (
-    <span className="inline-block size-4 animate-spin rounded-full border-2 border-brand-500/30 border-t-brand-500" />
-  );
-}
+import { Badge, Button, ErrorText, Input, Spinner } from "./ui";
 
 /**
  * 轮询某个本地实例的登录态并渲染对应的交互（扫码/滑块/短信/设备锁）。
@@ -108,11 +102,11 @@ export function LoginFlowPanel({
           {data.qrcodeDataUrl ? (
             <img
               src={data.qrcodeDataUrl}
-              alt="登录二维码"
-              className="size-48 rounded-xl border border-[var(--border)] bg-white p-2"
+              alt="登录二维码，请用手机 QQ 扫码"
+              className="size-48 rounded-2xl border border-[var(--border)] bg-white p-2.5 shadow-lg shadow-brand-600/10"
             />
           ) : (
-            <div className="flex size-48 items-center justify-center rounded-xl border border-[var(--border)] surface-2">
+            <div className="flex size-48 items-center justify-center rounded-2xl border border-[var(--border)] surface-2">
               <Spinner />
             </div>
           )}
@@ -229,16 +223,10 @@ export function LoginFlowPanel({
       )}
 
       {data.phase === "error" && (
-        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
-          {data.lastError ?? "登录失败"}
-        </div>
+        <ErrorText>{data.lastError ?? "登录失败"}</ErrorText>
       )}
 
-      {err && (
-        <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
-          {err}
-        </p>
-      )}
+      {err && <ErrorText>{err}</ErrorText>}
     </div>
   );
 }
